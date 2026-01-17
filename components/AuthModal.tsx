@@ -121,9 +121,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
       setError("Password must be at least 6 characters.");
       return;
     }
-    
-    // In a real app, you'd update the DB. Here we update localStorage if needed.
-    // For this prototype, we just confirm and send to success.
     setStep('success');
     setTimeout(() => {
       onLogin({ name: name || 'User', email, role: email.includes('admin') ? 'admin' : 'user' });
@@ -176,11 +173,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
         </button>
 
         <div className="text-center mb-8 relative z-10">
-          <div className="mb-4">
+          <div className="mb-6">
             <img 
-              src="https://raw.githubusercontent.com/vibe-stream/cdn/main/WELS-logo.png" 
+              src="https://api.a0.dev/assets/image?text=WELS%20shoe%20brand%20logo%20modern%20minimalist&seed=123" 
               alt="WELS" 
-              className="h-10 mx-auto filter brightness-0 invert" 
+              className="h-16 mx-auto filter brightness-0 invert" 
             />
           </div>
           <h2 className="text-xl font-black uppercase tracking-tight">

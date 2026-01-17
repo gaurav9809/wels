@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StoreService, Product, Order, Variant, SiteSettings } from '../services/StoreService';
 
 const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
@@ -8,21 +8,27 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<SiteSettings>(StoreService.getSettings());
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setProducts(StoreService.getProducts());
     setOrders(StoreService.getOrders());
   }, []);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        callback(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveProduct = () => {
     if (editing) {
-      const finalVariants = (editing.variants || []).map(v => ({
-        ...v,
-        images: Array.isArray(v.images) 
-          ? v.images 
-          : (v.images as any).split(',').map((s: string) => s.trim()).filter(Boolean)
-      }));
-      StoreService.saveProduct({ ...editing, variants: finalVariants } as Product);
+      StoreService.saveProduct(editing as Product);
       setProducts(StoreService.getProducts());
       setEditing(null);
     }
@@ -60,13 +66,17 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
     setEditing({ ...editing, variants: newVariants });
   };
 
-  const updateStock = (vIndex: number, sizeNum: number, stock: number) => {
+  const addImageToVariant = (vIndex: number, base64: string) => {
     const newVariants = [...(editing?.variants || [])];
-    const newSizes = [...newVariants[vIndex].sizes];
-    const sIdx = newSizes.findIndex(s => s.size === sizeNum);
-    if (sIdx > -1) newSizes[sIdx].stock = stock;
-    else newSizes.push({ size: sizeNum, stock });
-    newVariants[vIndex].sizes = newSizes;
+    newVariants[vIndex].images = [...(newVariants[vIndex].images || []), base64];
+    setEditing({ ...editing, variants: newVariants });
+    // Set first image as primary if none
+    if (!editing.image) setEditing(prev => ({ ...prev, image: base64 }));
+  };
+
+  const removeImageFromVariant = (vIndex: number, imgIndex: number) => {
+    const newVariants = [...(editing?.variants || [])];
+    newVariants[vIndex].images.splice(imgIndex, 1);
     setEditing({ ...editing, variants: newVariants });
   };
 
@@ -92,8 +102,8 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
             ))}
           </div>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-white flex items-center gap-2 group transition-all">
-          <i className="fas fa-times group-hover:rotate-90 transition-transform"></i> Exit Dashboard
+        <button onClick={onClose} className="text-gray-400 hover:text-white flex items-center gap-2 group transition-all font-black text-[10px] tracking-widest uppercase">
+          <i className="fas fa-times group-hover:rotate-90 transition-transform"></i> Exit
         </button>
       </div>
 
@@ -114,7 +124,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Status</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Stock</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Price</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Action</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-500 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -139,14 +149,12 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                           {p.isHidden ? 'HIDDEN' : 'LIVE'}
                         </button>
                       </td>
-                      <td className="p-6">
-                        <span className={`text-[10px] font-bold ${totalStock < 10 ? 'text-red-400' : 'text-gray-400'}`}>
-                          {totalStock} units
-                        </span>
+                      <td className="p-6 font-bold text-[10px] text-gray-400">
+                        {totalStock} UNITS
                       </td>
-                      <td className="p-6 font-bold text-sm">${p.price}</td>
-                      <td className="p-6">
-                        <div className="flex gap-2">
+                      <td className="p-6 font-black text-sm text-blue-400">${p.price}</td>
+                      <td className="p-6 text-right">
+                        <div className="flex gap-2 justify-end">
                           <button onClick={() => setEditing(p)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-blue-600 transition-all text-[10px]"><i className="fas fa-edit"></i></button>
                           <button onClick={() => { if(confirm('Delete this product?')) { StoreService.deleteProduct(p.id); setProducts(StoreService.getProducts()); } }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-600 transition-all text-[10px]"><i className="fas fa-trash"></i></button>
                         </div>
@@ -174,9 +182,18 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Sub-headline</label>
                 <textarea value={settings.heroSubtitle} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 min-h-[100px] text-sm" />
               </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Star Shoe Image URL</label>
-                <input value={settings.heroImage} onChange={e => setSettings({...settings, heroImage: e.target.value})} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 text-xs" />
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">Hero Shoe Image</label>
+                <div className="flex items-center gap-6 p-4 bg-white/5 border border-dashed border-white/20 rounded-2xl">
+                  <img src={settings.heroImage} className="w-24 h-24 object-contain bg-black/40 rounded-xl" />
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold text-gray-500 mb-2 uppercase">Preferred: Transparent PNG</p>
+                    <label className="bg-white text-black px-6 py-2.5 rounded-xl text-[10px] font-black cursor-pointer hover:bg-blue-600 hover:text-white transition-all block text-center">
+                      UPLOAD NEW IMAGE
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, (base64) => setSettings({...settings, heroImage: base64}))} />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -226,31 +243,19 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                     <p className="text-[10px] text-gray-400 font-medium">{o.userId}</p>
                  </div>
                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{o.date}</p>
-                 <div className="mt-4 pt-4 border-t border-white/5">
-                    <p className="text-[8px] font-black text-gray-600 uppercase mb-2">Order Items</p>
-                    <div className="space-y-2">
-                       {o.items.map((item, idx) => (
-                         <div key={idx} className="flex justify-between text-[10px]">
-                            <span className="text-gray-300">{item.qty}x {item.product.name}</span>
-                            <span className="font-bold">${item.product.price * item.qty}</span>
-                         </div>
-                       ))}
-                    </div>
-                 </div>
                </div>
              ))}
            </div>
         </div>
       )}
 
-      {/* Deep Product Editor Modal */}
       {editing && (
         <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="glass-card w-full max-w-4xl p-10 rounded-[3rem] my-auto border-white/20 shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center mb-10">
               <div>
                 <h3 className="text-3xl font-black heading-font tracking-tighter uppercase">{editing.id ? 'Modify Product' : 'Add New Style'}</h3>
-                <p className="text-[9px] font-black text-blue-500 tracking-[0.2em] uppercase mt-1">Product Details & Variants</p>
+                <p className="text-[9px] font-black text-blue-500 tracking-[0.2em] uppercase mt-1">Product Details & Multiple Images</p>
               </div>
               <button onClick={() => setEditing(null)} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 text-gray-500"><i className="fas fa-times"></i></button>
             </div>
@@ -268,17 +273,12 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                </div>
 
                <div className="space-y-2">
-                 <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1">Primary Display Image URL</label>
-                 <input value={editing.image} onChange={e => setEditing({...editing, image: e.target.value})} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 text-xs" placeholder="https://..." />
-               </div>
-
-               <div className="space-y-2">
                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1">Story / Description</label>
                  <textarea value={editing.description} onChange={e => setEditing({...editing, description: e.target.value})} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 min-h-[80px] text-sm" placeholder="Tell the story of this design..." />
                </div>
 
                <div className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
-                 <button onClick={() => setEditing({...editing, isFeatured: !editing.isFeatured})} className={`flex-1 py-3 rounded-xl font-black text-[10px] tracking-widest transition-all ${editing.isFeatured ? 'bg-yellow-500 text-black' : 'bg-white/5 text-gray-500'}`}>
+                 <button onClick={() => setEditing({...editing, isFeatured: !editing.isFeatured})} className={`flex-1 py-3 rounded-xl font-black text-[10px] tracking-widest transition-all ${editing.isFeatured ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'bg-white/5 text-gray-500'}`}>
                     {editing.isFeatured ? '★ FEATURED' : 'MARK AS FEATURED'}
                  </button>
                  <button onClick={() => setEditing({...editing, isHidden: !editing.isHidden})} className={`flex-1 py-3 rounded-xl font-black text-[10px] tracking-widest transition-all ${editing.isHidden ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-500'}`}>
@@ -288,7 +288,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
                <div className="space-y-6 pt-6 border-t border-white/10">
                  <div className="flex justify-between items-center">
-                    <h4 className="text-lg font-black uppercase tracking-tighter">Color Variants & Stock</h4>
+                    <h4 className="text-lg font-black uppercase tracking-tighter">Colorways & Gallery</h4>
                     <button onClick={addVariant} className="text-[9px] font-black bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg uppercase tracking-widest transition-all">Add Colorway</button>
                  </div>
                  
@@ -298,28 +298,51 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                        const newV = [...(editing.variants || [])];
                        newV.splice(vIdx, 1);
                        setEditing({...editing, variants: newV});
-                     }} className="absolute top-4 right-4 text-red-500 opacity-0 group-hover/var:opacity-100 transition-opacity"><i className="fas fa-trash-alt"></i></button>
+                     }} className="absolute top-4 right-4 text-red-500 opacity-0 group-hover/var:opacity-100 transition-opacity p-2"><i className="fas fa-trash-alt"></i></button>
                      
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                         <label className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Color Name</label>
-                         <input value={v.color} onChange={e => updateVariant(vIdx, 'color', e.target.value)} className="w-full bg-black/40 border border-white/5 p-3 rounded-xl text-xs font-bold" placeholder="e.g. Midnight Blue" />
-                       </div>
-                       <div className="space-y-2">
-                         <label className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Gallery URLs (Comma separated)</label>
-                         <input value={Array.isArray(v.images) ? v.images.join(', ') : v.images as any} onChange={e => updateVariant(vIdx, 'images', e.target.value)} className="w-full bg-black/40 border border-white/5 p-3 rounded-xl text-[10px]" placeholder="url1, url2..." />
-                       </div>
+                     <div className="space-y-4">
+                        <div className="max-w-[200px]">
+                          <label className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 block">Color Name</label>
+                          <input value={v.color} onChange={e => updateVariant(vIdx, 'color', e.target.value)} className="w-full bg-black/40 border border-white/5 p-3 rounded-xl text-xs font-bold" placeholder="Midnight Blue" />
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[8px] font-black text-blue-500 uppercase tracking-widest block">Product Gallery (Upload Multiple)</label>
+                          <div className="flex flex-wrap gap-4">
+                            {v.images?.map((img, iIdx) => (
+                              <div key={iIdx} className="relative group/img w-20 h-20 bg-black/40 rounded-xl border border-white/10 overflow-hidden">
+                                <img src={img} className="w-full h-full object-contain" />
+                                <button onClick={() => removeImageFromVariant(vIdx, iIdx)} className="absolute inset-0 bg-red-600/80 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                  <i className="fas fa-times text-white text-xs"></i>
+                                </button>
+                              </div>
+                            ))}
+                            <label className="w-20 h-20 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-blue-500 transition-all">
+                              <i className="fas fa-plus text-xs text-gray-500 mb-1"></i>
+                              <span className="text-[8px] font-black text-gray-500">ADD</span>
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, (base64) => addImageToVariant(vIdx, base64))} />
+                            </label>
+                          </div>
+                        </div>
                      </div>
 
                      <div className="space-y-2">
-                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Size Availability (Stock)</label>
+                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Inventory by Size</label>
                         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                           {[7, 8, 9, 10, 11, 12].map(size => {
                             const sizeObj = v.sizes.find(s => s.size === size) || { size, stock: 0 };
                             return (
                               <div key={size} className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center">
                                 <span className="text-[9px] font-bold text-gray-500">US {size}</span>
-                                <input type="number" value={sizeObj.stock} onChange={e => updateStock(vIdx, size, Number(e.target.value))} className="w-full bg-transparent text-center font-black text-blue-400 outline-none text-sm" />
+                                <input type="number" value={sizeObj.stock} onChange={e => {
+                                  const newVariants = [...(editing.variants || [])];
+                                  const newSizes = [...newVariants[vIdx].sizes];
+                                  const sIdx = newSizes.findIndex(s => s.size === size);
+                                  if (sIdx > -1) newSizes[sIdx].stock = Number(e.target.value);
+                                  else newSizes.push({ size, stock: Number(e.target.value) });
+                                  newVariants[vIdx].sizes = newSizes;
+                                  setEditing({ ...editing, variants: newVariants });
+                                }} className="w-full bg-transparent text-center font-black text-blue-400 outline-none text-sm" />
                               </div>
                             );
                           })}
@@ -330,7 +353,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                </div>
             </div>
             <div className="flex gap-4 pt-4">
-              <button onClick={handleSaveProduct} className="flex-1 bg-white text-black py-5 rounded-2xl font-black text-xs tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-blue-600/10">SAVE CHANGES</button>
+              <button onClick={handleSaveProduct} className="flex-1 bg-white text-black py-5 rounded-2xl font-black text-xs tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-blue-600/10">SAVE PRODUCT</button>
               <button onClick={() => setEditing(null)} className="px-10 bg-white/5 py-5 rounded-2xl font-black text-xs tracking-widest hover:bg-white/10 transition-all uppercase">Cancel</button>
             </div>
           </div>
