@@ -27,6 +27,7 @@ export interface SiteSettings {
 export interface Order {
   id: string;
   userId: string;
+  userName?: string; // Added field
   items: any[];
   total: number;
   date: string;

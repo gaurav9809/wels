@@ -20,7 +20,6 @@ const App: React.FC = () => {
   const [filter, setFilter] = useState<string>('All');
   const [settings, setSettings] = useState<SiteSettings>(StoreService.getSettings());
 
-  // Check for persistent login on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('wels_user');
     if (savedUser) {
@@ -28,17 +27,13 @@ const App: React.FC = () => {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
       } catch (e) {
-        console.error("Failed to parse saved user", e);
         localStorage.removeItem('wels_user');
       }
     }
-
-    // Load cart from storage if you want it persistent too
     const savedCart = localStorage.getItem('wels_cart');
     if (savedCart) setCart(JSON.parse(savedCart));
   }, []);
 
-  // Sync cart to storage whenever it changes
   useEffect(() => {
     localStorage.setItem('wels_cart', JSON.stringify(cart));
   }, [cart]);
@@ -70,13 +65,10 @@ const App: React.FC = () => {
 
   const handleNavigate = (newView: 'home' | 'cart' | 'admin' | 'product', category?: string, prod?: Product) => {
     if (prod) setSelectedProduct(prod);
-    
-    // Prevent non-admins from accessing admin view
     if (newView === 'admin' && user?.role !== 'admin') {
       setIsAuthOpen(true);
       return;
     }
-
     setView(newView);
     if (category) {
       setFilter(category);
@@ -88,6 +80,25 @@ const App: React.FC = () => {
     } else {
        window.scrollTo({ top: 0, behavior: 'auto' });
     }
+  };
+
+  const handleCheckout = () => {
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
+    
+    // Explicitly pass user email and name to the order
+    StoreService.createOrder({ 
+      userId: user.email, 
+      userName: user.name, // Added this field
+      items: cart, 
+      total: cart.reduce((a,b) => a + (b.product.price * b.qty), 0) 
+    });
+    
+    setCart([]);
+    alert("Order Placed Successfully!");
+    setView('home');
   };
 
   return (
@@ -130,17 +141,7 @@ const App: React.FC = () => {
           <Cart 
             items={cart} 
             onUpdateQty={(id, delta) => setCart(prev => prev.map(i => i.product.id === id ? {...i, qty: Math.max(0, i.qty + delta)} : i).filter(i => i.qty > 0))}
-            onCheckout={() => {
-              if(!user) return setIsAuthOpen(true);
-              StoreService.createOrder({ 
-                userId: user.email, 
-                items: cart, 
-                total: cart.reduce((a,b) => a + (b.product.price * b.qty), 0) 
-              });
-              setCart([]);
-              alert("Order Placed Successfully!");
-              setView('home');
-            }}
+            onCheckout={handleCheckout}
           />
         )}
 

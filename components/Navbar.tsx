@@ -43,9 +43,10 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onViewChange, user, onLoginC
               {user.role === 'admin' && (
                 <button 
                   onClick={() => onViewChange('admin')} 
-                  className="hidden sm:block text-[10px] font-black tracking-widest text-purple-400 border border-purple-400/30 px-3 py-1.5 rounded-lg hover:bg-purple-400 hover:text-black transition-all"
+                  className="flex items-center gap-2 text-[10px] font-black tracking-widest text-purple-400 border border-purple-400/30 px-3 py-1.5 rounded-lg hover:bg-purple-400 hover:text-black transition-all"
                 >
-                  ADMIN
+                  <i className="fas fa-cog"></i>
+                  <span className="hidden xs:inline">ADMIN</span>
                 </button>
               )}
               <div className="flex items-center gap-2 bg-white/5 pr-4 pl-1 py-1 rounded-full border border-white/10">

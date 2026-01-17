@@ -221,7 +221,22 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                     <span className="text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded font-bold uppercase border border-green-500/20">{o.status}</span>
                  </div>
                  <p className="text-3xl font-black mb-1">${o.total}</p>
-                 <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{o.date}</p>
+                 <div className="space-y-1 mb-4">
+                    <p className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">{o.userName || 'Unknown Customer'}</p>
+                    <p className="text-[10px] text-gray-400 font-medium">{o.userId}</p>
+                 </div>
+                 <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{o.date}</p>
+                 <div className="mt-4 pt-4 border-t border-white/5">
+                    <p className="text-[8px] font-black text-gray-600 uppercase mb-2">Order Items</p>
+                    <div className="space-y-2">
+                       {o.items.map((item, idx) => (
+                         <div key={idx} className="flex justify-between text-[10px]">
+                            <span className="text-gray-300">{item.qty}x {item.product.name}</span>
+                            <span className="font-bold">${item.product.price * item.qty}</span>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
                </div>
              ))}
            </div>
