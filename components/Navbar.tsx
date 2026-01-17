@@ -13,11 +13,20 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onViewChange, user, onLoginC
   return (
     <nav className="fixed w-full z-50 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 py-4">
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-        <div onClick={() => onViewChange('home')} className="cursor-pointer text-2xl font-black heading-font tracking-tighter flex items-center gap-2 group">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform">
-            <span className="text-white text-lg font-black">W</span>
+        <div onClick={() => onViewChange('home')} className="cursor-pointer text-2xl font-black heading-font tracking-tighter flex items-center gap-3 group">
+          <div className="w-12 h-10 flex items-center justify-center transition-transform group-hover:scale-105">
+            <img 
+              src="https://raw.githubusercontent.com/vibe-stream/cdn/main/WELS-logo.png" 
+              alt="WELS Logo" 
+              className="h-full object-contain filter brightness-0 invert" 
+              onError={(e) => {
+                // Fallback to stylized W if image fails
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as any).parentElement.innerHTML = '<div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center"><span class="text-white text-lg font-black">W</span></div>';
+              }}
+            />
           </div>
-          <span className="gradient-text">WELS</span>
+          <span className="gradient-text tracking-widest hidden xs:inline">WELS</span>
         </div>
 
         <div className="flex items-center gap-4 md:gap-8">
