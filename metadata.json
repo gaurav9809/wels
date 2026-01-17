@@ -1,0 +1,7 @@
+{
+  "name": "WELS - Step Into Style",
+  "description": "Full-stack E-commerce experience with Admin Panel, Cart System, and Persistent Storage.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
