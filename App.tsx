@@ -59,39 +59,16 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  const refreshData = () => {
-    setSettings(StoreService.getSettings());
-  };
-
-  const handleNavigate = (newView: 'home' | 'cart' | 'admin' | 'product', category?: string, prod?: Product) => {
-    if (prod) setSelectedProduct(prod);
-    if (newView === 'admin' && user?.role !== 'admin') {
-      setIsAuthOpen(true);
-      return;
-    }
-    setView(newView);
-    if (category) {
-      setFilter(category);
-      setTimeout(() => {
-        document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    } else if (newView !== 'product') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-       window.scrollTo({ top: 0, behavior: 'auto' });
-    }
-  };
-
   const handleCheckout = () => {
     if (!user) {
       setIsAuthOpen(true);
       return;
     }
     
-    // Explicitly pass user email and name to the order
+    // CRITICAL: Passing user info here
     StoreService.createOrder({ 
       userId: user.email, 
-      userName: user.name, // Added this field
+      userName: user.name, 
       items: cart, 
       total: cart.reduce((a,b) => a + (b.product.price * b.qty), 0) 
     });
@@ -105,7 +82,10 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <Navbar 
         cartCount={cart.reduce((a, b) => a + b.qty, 0)} 
-        onViewChange={(v) => handleNavigate(v)} 
+        onViewChange={(v) => {
+          if (v === 'admin' && user?.role !== 'admin') { setIsAuthOpen(true); return; }
+          setView(v);
+        }} 
         user={user}
         onLoginClick={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
@@ -123,7 +103,7 @@ const App: React.FC = () => {
               filter={filter} 
               onFilterChange={setFilter} 
               onAddToCart={addToCart} 
-              onProductClick={(p) => handleNavigate('product', undefined, p)}
+              onProductClick={(p) => { setSelectedProduct(p); setView('product'); }}
               productsPerRow={settings.productsPerRow}
             />
           </>
@@ -146,13 +126,11 @@ const App: React.FC = () => {
         )}
 
         {view === 'admin' && user?.role === 'admin' && (
-          <AdminDashboard 
-            onClose={() => { setView('home'); refreshData(); }} 
-          />
+          <AdminDashboard onClose={() => setView('home')} />
         )}
       </main>
 
-      <Footer onCategoryClick={(cat) => handleNavigate('home', cat)} />
+      <Footer onCategoryClick={(cat) => { setFilter(cat); setView('home'); }} />
       <FloatingWhatsApp />
       
       {isAuthOpen && (
