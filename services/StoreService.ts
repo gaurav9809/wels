@@ -1,4 +1,3 @@
-
 export interface Variant {
   color: string;
   sizes: { size: number; stock: number }[];
@@ -43,10 +42,21 @@ export interface SiteSettings {
   showReviews: boolean;
 }
 
+export interface ShippingInfo {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pinCode: string;
+}
+
 export interface Order {
   id: string;
   userId: string;
   userName?: string;
+  shippingInfo?: ShippingInfo;
+  paymentMethod?: string;
   items: any[];
   total: number;
   date: string;
@@ -125,7 +135,7 @@ export const StoreService = {
     const newOrder: Order = {
       ...order,
       id: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-      date: new Date().toLocaleDateString(),
+      date: new Date().toLocaleString('en-IN'),
       status: 'Pending'
     };
     orders.push(newOrder);

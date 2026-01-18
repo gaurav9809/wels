@@ -205,7 +205,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                       </div>
                       <div>
                         <span className="font-black block uppercase tracking-tight">{p.name}</span>
-                        <span className="text-[10px] text-blue-500 tech-font">${p.price}</span>
+                        <span className="text-[10px] text-blue-500 tech-font">₹{p.price}</span>
                       </div>
                     </td>
                     <td className="p-8">
@@ -279,16 +279,29 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
           {orders.length === 0 ? (
             <div className="text-center py-20 text-gray-500 tech-font uppercase tracking-widest text-[10px]">No transaction history found</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {orders.map(order => (
-                <div key={order.id} className="p-6 bg-white/5 rounded-2xl border border-white/5 flex justify-between items-center">
-                  <div>
-                    <p className="text-[10px] tech-font text-blue-500 mb-1">{order.id}</p>
-                    <p className="font-black uppercase">{order.userName}</p>
+                <div key={order.id} className="p-8 bg-white/5 rounded-3xl border border-white/5 flex flex-col md:flex-row gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <p className="text-[10px] tech-font text-blue-500 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">{order.id}</p>
+                      <p className="text-[10px] font-black text-gray-500 tech-font">{order.date}</p>
+                    </div>
+                    <p className="font-black uppercase text-xl mb-2">{order.shippingInfo?.fullName || order.userName}</p>
+                    <p className="text-xs text-gray-400 mb-4 flex items-center gap-2">
+                       <i className="fas fa-phone"></i> {order.shippingInfo?.phone || 'No Contact'}
+                    </p>
+                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 text-[11px] text-gray-300 leading-relaxed">
+                       <p className="font-black text-[9px] text-gray-500 uppercase mb-2 tracking-widest">Shipping Address</p>
+                       {order.shippingInfo?.address}, {order.shippingInfo?.city}, {order.shippingInfo?.state} - {order.shippingInfo?.pinCode}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-black text-lg">${order.total}</p>
-                    <p className="text-[10px] text-gray-500">{order.date}</p>
+                  <div className="md:w-64 text-right flex flex-col justify-center">
+                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1">{order.paymentMethod || 'UNKNOWN'}</p>
+                    <p className="font-black text-3xl gradient-text mb-4">₹{order.total}</p>
+                    <div className={`text-[9px] font-black px-4 py-2 rounded-xl inline-block ml-auto uppercase tracking-widest ${order.status === 'Pending' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'}`}>
+                       {order.status}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -299,7 +312,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
       {editing && (
         <div className="fixed inset-0 z-[200] bg-black/98 flex items-center justify-center p-6 animate-in fade-in duration-300 overflow-y-auto">
-          <div className="glass-card w-full max-w-4xl p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] space-y-8 border-blue-500/20 shadow-[0_0_100px_rgba(59,130,246,0.1)] my-10">
+          <div className="glass-card w-full max-w-4xl p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] space-y-8 border-blue-500/20 shadow-[0_0_100px_rgba(59,130,246,0.1)] my-10 text-white">
             <h2 className="text-3xl md:text-4xl font-black uppercase heading-font tracking-tighter italic">Entity <span className="text-blue-500">Mod_Tool</span></h2>
             
             <div className="grid md:grid-cols-2 gap-8">
@@ -311,7 +324,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Price ($)</label>
+                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Price (₹)</label>
                     <input placeholder="Valuation" type="number" value={editing.price} onChange={e => setEditing({...editing, price: Number(e.target.value)})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500 text-white" />
                   </div>
                   <div>

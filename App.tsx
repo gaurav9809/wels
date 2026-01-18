@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -13,7 +12,7 @@ import Gallery from './components/Gallery';
 import Reviews from './components/Reviews';
 import About from './components/About';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
-import { Product, StoreService, SiteSettings } from './services/StoreService';
+import { Product, StoreService, SiteSettings, ShippingInfo } from './services/StoreService';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'home' | 'cart' | 'admin' | 'product'>('home');
@@ -85,7 +84,7 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = (shipping: ShippingInfo, paymentMethod: string) => {
     if (!user) {
       setIsAuthOpen(true);
       return;
@@ -93,11 +92,13 @@ const App: React.FC = () => {
     StoreService.createOrder({ 
       userId: user.email, 
       userName: user.name, 
+      shippingInfo: shipping,
+      paymentMethod: paymentMethod,
       items: cart, 
       total: cart.reduce((a,b) => a + (b.product.price * b.qty), 0) 
     });
     setCart([]);
-    alert("Order Placed Successfully!");
+    alert(`Order Placed Successfully using ${paymentMethod}! Tracking details sent to ${shipping.phone}`);
     setView('home');
   };
 
@@ -153,6 +154,8 @@ const App: React.FC = () => {
             items={cart} 
             onUpdateQty={(id, delta) => setCart(prev => prev.map(i => i.product.id === id ? {...i, qty: Math.max(0, i.qty + delta)} : i).filter(i => i.qty > 0))}
             onCheckout={handleCheckout}
+            user={user}
+            onAuthRequired={() => setIsAuthOpen(true)}
           />
         )}
 

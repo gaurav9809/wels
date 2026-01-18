@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Product, StoreService } from '../services/StoreService';
 
@@ -116,7 +115,7 @@ const Products: React.FC<Props> = ({ onAddToCart, onProductClick, filter, onFilt
               <div className="mt-auto flex items-center justify-between gap-4">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Starting at</span>
-                  <span className="text-white font-black text-3xl tracking-tighter">${p.price}</span>
+                  <span className="text-white font-black text-3xl tracking-tighter">₹{p.price}</span>
                 </div>
                 
                 <div className="flex gap-2">

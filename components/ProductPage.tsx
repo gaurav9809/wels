@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Product, Variant } from '../services/StoreService';
 
@@ -77,7 +76,7 @@ const ProductPage: React.FC<Props> = ({ product, onAddToCart, onBack }) => {
             </div>
             <h1 className="text-5xl md:text-7xl font-black heading-font mt-2 mb-6 tracking-tighter italic uppercase">{product.name}</h1>
             <div className="flex items-center gap-6">
-              <span className="text-4xl font-black gradient-text">${product.price}</span>
+              <span className="text-4xl font-black gradient-text">₹{product.price}</span>
             </div>
           </div>
 
@@ -131,8 +130,6 @@ const ProductPage: React.FC<Props> = ({ product, onAddToCart, onBack }) => {
           </div>
         </div>
       </div>
-
-      {/* Size Guide Modal omitted for brevity, same as original */}
     </div>
   );
 };
