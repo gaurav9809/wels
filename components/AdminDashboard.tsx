@@ -19,17 +19,9 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
     setSettings(StoreService.getSettings());
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => callback(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>, currentImages: string[]) => {
+  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    // Fix: Explicitly type the Promise as string to avoid 'unknown' assignment issues
     const readers = files.map(file => {
       return new Promise<string>((resolve) => {
         const reader = new FileReader();
@@ -38,12 +30,12 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
       });
     });
 
-    // Fix: Explicitly cast the result of Promise.all to string[] to avoid 'unknown' assignment error
     Promise.all(readers).then((newImages: string[]) => {
       if (editing) {
+        const currentImages = editing.images || [];
         setEditing({
           ...editing,
-          images: [...(editing.images || []), ...newImages]
+          images: [...currentImages, ...newImages]
         });
       }
     });
@@ -54,6 +46,36 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
     const updated = [...editing.images];
     updated.splice(index, 1);
     setEditing({ ...editing, images: updated });
+  };
+
+  const handleCommit = () => {
+    if (!editing || !editing.name) {
+      alert("Error: Shoe Name is required.");
+      return;
+    }
+
+    // Explicitly construct the final Product object to ensure all fields are present
+    const finalProduct: Product = {
+      id: editing.id || Date.now().toString(),
+      name: editing.name,
+      price: editing.price || 0,
+      category: editing.category || "Casual",
+      description: editing.description || "",
+      images: editing.images || [],
+      // Ensure the main image property is always the first one in the gallery
+      image: (editing.images && editing.images.length > 0) ? editing.images[0] : (editing.image || ""),
+      isFeatured: editing.isFeatured || false,
+      isHidden: editing.isHidden || false,
+      variants: editing.variants || [],
+      orderWeight: editing.orderWeight !== undefined ? editing.orderWeight : products.length
+    };
+
+    StoreService.saveProduct(finalProduct);
+    
+    // Reset state and notify user
+    setEditing(null);
+    refreshData();
+    alert("SYSTEM: Entity committed to local storage successfully.");
   };
 
   const moveProduct = (index: number, direction: 'up' | 'down') => {
@@ -68,7 +90,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
   const handleSaveSettings = () => {
     StoreService.saveSettings(settings);
-    alert('Global Layout Updated!');
+    alert('Site layout and theme updated.');
     refreshData();
   };
 
@@ -96,7 +118,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
               <h2 className="text-xl font-black uppercase tracking-tight">Product Alignment</h2>
               <p className="text-xs text-gray-500 mt-1">Move products to adjust their position on the home page</p>
             </div>
-            <button onClick={() => setEditing({ name: '', price: 0, image: '', images: [], category: 'Casual', variants: [], orderWeight: products.length })} className="bg-white text-black px-8 py-4 rounded-xl font-black text-xs uppercase hover:bg-blue-600 hover:text-white transition-all">Add_New_Shoe</button>
+            <button onClick={() => setEditing({ name: '', price: 0, image: '', images: [], category: 'Casual', variants: [], isFeatured: false, isHidden: false })} className="bg-white text-black px-8 py-4 rounded-xl font-black text-xs uppercase hover:bg-blue-600 hover:text-white transition-all">Add_New_Shoe</button>
           </div>
 
           <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/10">
@@ -158,7 +180,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                 <div key={item.key} className="flex justify-between items-center p-6 bg-white/5 rounded-2xl border border-white/5">
                   <span className="font-bold text-sm text-gray-300">{item.label}</span>
                   <button 
-                    onClick={() => setSettings({...settings, [item.key]: !settings[item.key] as any})}
+                    onClick={() => setSettings({...settings, [item.key]: !settings[item.key as keyof SiteSettings] as any})}
                     className={`w-14 h-8 rounded-full relative transition-all ${settings[item.key as keyof SiteSettings] ? 'bg-blue-600' : 'bg-white/10'}`}
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings[item.key as keyof SiteSettings] ? 'left-7' : 'left-1'}`}></div>
@@ -212,9 +234,9 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Category</label>
                     <select value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500">
-                      <option className="bg-black">Running</option>
-                      <option className="bg-black">Casual</option>
-                      <option className="bg-black">Training</option>
+                      <option className="bg-black" value="Running">Running</option>
+                      <option className="bg-black" value="Casual">Casual</option>
+                      <option className="bg-black" value="Training">Training</option>
                     </select>
                   </div>
                 </div>
@@ -231,7 +253,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                     <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Media Gallery</label>
                     <label className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest cursor-pointer hover:bg-blue-500 transition-all">
                       <i className="fas fa-plus mr-2"></i> Add_Photos
-                      <input type="file" multiple onChange={e => handleMultipleFiles(e, editing.images || [])} className="hidden" />
+                      <input type="file" multiple onChange={handleMultipleFiles} className="hidden" accept="image/*" />
                     </label>
                   </div>
                   
@@ -259,7 +281,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
                 <div className="flex items-center gap-6 p-6 bg-white/5 rounded-2xl border border-white/5">
                    <div className="flex items-center gap-3">
-                     <input type="checkbox" checked={editing.isFeatured} onChange={e => setEditing({...editing, iFeatured: e.target.checked})} className="w-5 h-5 accent-blue-600" id="feat" />
+                     <input type="checkbox" checked={editing.isFeatured} onChange={e => setEditing({...editing, isFeatured: e.target.checked})} className="w-5 h-5 accent-blue-600" id="feat" />
                      <label htmlFor="feat" className="text-[10px] font-black uppercase tracking-widest text-blue-500 cursor-pointer">Featured_Status</label>
                    </div>
                    <div className="flex items-center gap-3">
@@ -271,7 +293,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
             </div>
 
             <div className="flex gap-4 pt-4 border-t border-white/5">
-              <button onClick={() => { StoreService.saveProduct(editing as Product); setEditing(null); refreshData(); }} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] hover:bg-blue-600 hover:text-white transition-all shadow-xl">Commit_Entry</button>
+              <button onClick={handleCommit} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] hover:bg-blue-600 hover:text-white transition-all shadow-xl">Commit_Entry</button>
               <button onClick={() => setEditing(null)} className="px-10 bg-white/5 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] border border-white/10 hover:bg-white/10 transition-all">Abort</button>
             </div>
           </div>
