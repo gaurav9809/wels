@@ -8,9 +8,11 @@ interface Props {
   filter: string;
   onFilterChange: (f: string) => void;
   productsPerRow: number;
+  isAdmin?: boolean;
+  onEditClick?: () => void;
 }
 
-const Products: React.FC<Props> = ({ onAddToCart, onProductClick, filter, onFilterChange, productsPerRow }) => {
+const Products: React.FC<Props> = ({ onAddToCart, onProductClick, filter, onFilterChange, productsPerRow, isAdmin, onEditClick }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const categories = ['All', 'Running', 'Casual', 'Training'];
 
@@ -19,7 +21,7 @@ const Products: React.FC<Props> = ({ onAddToCart, onProductClick, filter, onFilt
   }, []);
 
   const filteredProducts = products
-    .filter(p => !p.isHidden) // Don't show hidden shoes
+    .filter(p => !p.isHidden || isAdmin) // Admins can see hidden shoes to edit them
     .filter(p => filter === 'All' || p.category === filter)
     .sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0)); // Featured first
 
@@ -31,22 +33,34 @@ const Products: React.FC<Props> = ({ onAddToCart, onProductClick, filter, onFilt
   }[productsPerRow] || 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
 
   return (
-    <section id="products" className="py-24 bg-[#0a0a0a]">
-      <div className="max-w-7xl mx-auto px-6 text-center mb-12">
-        <h2 className="text-4xl md:text-5xl font-black heading-font mb-4 uppercase tracking-tighter">
-          WELS <span className="text-blue-500">COLLECTION</span>
-        </h2>
-        <div className="w-20 h-1 bg-blue-600 mx-auto mb-6 rounded-full"></div>
+    <section id="products" className="py-32 bg-[#050505] relative">
+      <div className="max-w-7xl mx-auto px-6 text-center mb-20 reveal">
+        {isAdmin && (
+          <button 
+            onClick={onEditClick}
+            className="mb-8 bg-blue-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mx-auto"
+          >
+            <i className="fas fa-edit"></i> Edit_Store_Inventory
+          </button>
+        )}
         
-        <div className="flex flex-wrap justify-center gap-4 mb-16">
+        <div className="inline-block mb-4">
+           <span className="text-blue-500 font-black tracking-[0.5em] uppercase text-[10px]">Premium Selection</span>
+           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-blue-500 to-transparent mt-1"></div>
+        </div>
+        <h2 className="text-5xl md:text-7xl font-black heading-font mb-6 uppercase tracking-tighter italic">
+          WELS <span className="gradient-text">EDITIONS</span>
+        </h2>
+        
+        <div className="flex flex-wrap justify-center gap-3 mt-12">
           {categories.map(cat => (
             <button 
               key={cat}
               onClick={() => onFilterChange(cat)}
-              className={`px-8 py-3 rounded-full font-bold transition-all duration-300 transform ${
+              className={`px-10 py-3.5 rounded-2xl font-black tracking-widest text-[10px] uppercase transition-all duration-500 transform ${
                 filter === cat 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
-                : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-[0_15px_30px_rgba(37,99,235,0.3)] scale-105 border-transparent' 
+                : 'bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white border border-white/5'
               }`}
             >
               {cat}
@@ -55,51 +69,64 @@ const Products: React.FC<Props> = ({ onAddToCart, onProductClick, filter, onFilt
         </div>
       </div>
 
-      <div className={`max-w-7xl mx-auto px-6 grid ${gridCols} gap-10`}>
+      <div className={`max-w-7xl mx-auto px-6 grid ${gridCols} gap-10 lg:gap-14`}>
         {filteredProducts.map((p) => (
           <div 
             key={p.id} 
             onClick={() => onProductClick(p)}
-            className={`group glass-card rounded-[2.5rem] overflow-hidden cursor-pointer hover-shine relative ${p.isFeatured ? 'border-blue-500/30 bg-blue-500/5' : ''}`}
+            className={`reveal group glass-card rounded-[3rem] overflow-hidden cursor-pointer hover-shine relative flex flex-col transition-all duration-700 hover:scale-[1.03] hover:shadow-[0_40px_80px_rgba(0,0,0,0.8),0_0_20px_rgba(59,130,246,0.15)] ${p.isFeatured ? 'border-blue-500/20 bg-blue-500/[0.03]' : ''} ${p.isHidden ? 'opacity-50 grayscale' : ''}`}
           >
             {p.isFeatured && (
-              <div className="absolute top-4 left-4 z-20 bg-blue-600 text-[8px] font-black uppercase px-3 py-1 rounded-full shadow-lg">
-                FEATURED
+              <div className="absolute top-6 left-6 z-20 flex items-center gap-2 bg-blue-600 text-[9px] font-black uppercase px-4 py-1.5 rounded-full shadow-lg animate-pulse">
+                <i className="fas fa-bolt text-[8px]"></i> ELITE
               </div>
             )}
+
+            {isAdmin && (
+              <div className="absolute top-6 right-6 z-30">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onEditClick?.(); }}
+                  className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs hover:scale-110 transition-transform shadow-lg"
+                >
+                  <i className="fas fa-edit"></i>
+                </button>
+              </div>
+            )}
+            
             <div 
-              className={`relative h-80 flex items-center justify-center p-8 bg-gradient-to-b from-blue-600/5 to-transparent group-hover:from-blue-600/15 transition-colors duration-500`}
+              className="relative h-96 flex items-center justify-center p-12 bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden"
             >
-              <div className="absolute w-48 h-48 bg-blue-600/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] group-hover:bg-blue-600/20 group-hover:scale-150 transition-all duration-1000"></div>
               
               <img 
-                src={p.image} 
-                className="w-full h-full object-contain rotate-[-15deg] group-hover:rotate-0 group-hover:scale-110 group-hover:-translate-y-4 transition-all duration-700 ease-out z-10 drop-shadow-2xl" 
+                src={p.image || "https://api.a0.dev/assets/image?text=minimalist%20sneaker%20wireframe&seed=1"} 
+                className="w-full h-full object-contain rotate-[-12deg] group-hover:rotate-[-5deg] group-hover:scale-115 group-hover:-translate-y-8 transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) z-10 shoe-shadow" 
                 alt={p.name} 
               />
             </div>
 
-            <div className="p-8 relative">
-              <div className="flex justify-between items-start mb-4">
+            <div className="p-10 pt-4 relative z-20 flex-1 flex flex-col">
+              <div className="flex justify-between items-end mb-8">
                 <div>
-                  <h3 className="text-2xl font-bold group-hover:text-blue-400 transition-colors">{p.name}</h3>
-                  <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{p.category}</p>
+                  <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.3em] mb-2">{p.category} {p.isHidden ? '[HIDDEN]' : ''}</p>
+                  <h3 className="text-3xl font-black heading-font tracking-tighter uppercase leading-tight group-hover:gradient-text transition-all duration-500">{p.name || "UNNAMED_UNIT"}</h3>
                 </div>
-                <span className="text-blue-400 font-black text-2xl tracking-tighter group-hover:scale-110 transition-transform">${p.price}</span>
               </div>
               
-              <div className="flex gap-3 mt-6 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onAddToCart(p); }}
-                  className="flex-1 py-4 bg-white text-black font-black rounded-2xl hover:bg-blue-600 hover:text-white transition-all uppercase tracking-widest text-xs shadow-xl active:scale-95"
-                >
-                  Quick Add
-                </button>
-                <button 
-                  className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-blue-600/20 border border-transparent transition-all"
-                >
-                  <i className="fas fa-arrow-right -rotate-45 group-hover:rotate-0 transition-transform"></i>
-                </button>
+              <div className="mt-auto flex items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Starting at</span>
+                  <span className="text-white font-black text-3xl tracking-tighter">${p.price}</span>
+                </div>
+                
+                <div className="flex gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onAddToCart(p); }}
+                    className="h-14 px-8 bg-white text-black font-black rounded-2xl hover:bg-blue-600 hover:text-white transition-all uppercase tracking-[0.2em] text-[10px] shadow-xl active:scale-95 flex items-center gap-2"
+                  >
+                    <i className="fas fa-plus text-[8px]"></i> Add
+                  </button>
+                </div>
               </div>
             </div>
           </div>

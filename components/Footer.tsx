@@ -10,11 +10,11 @@ const Footer: React.FC<Props> = ({ onCategoryClick }) => {
     <footer className="py-24 bg-black border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-16 mb-16">
         <div className="col-span-1 md:col-span-2">
-          <div className="flex items-center gap-3 mb-8 group cursor-default">
+          <div className="flex items-center gap-4 mb-8 group cursor-default">
             <img 
               src="https://api.a0.dev/assets/image?text=WELS%20shoe%20brand%20logo%20modern%20minimalist&seed=123" 
               alt="WELS Logo" 
-              className="h-14 object-contain filter brightness-0 invert transition-transform group-hover:scale-105" 
+              className="h-16 object-contain filter invert transition-transform group-hover:scale-105" 
             />
             <div className="flex flex-col">
               <span className="text-4xl font-black heading-font tracking-tighter gradient-text uppercase leading-none">WELS</span>

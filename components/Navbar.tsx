@@ -11,38 +11,50 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ cartCount, onViewChange, user, onLoginClick, onLogout }) => {
   return (
-    <nav className="fixed w-full z-50 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 py-4">
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-        <div onClick={() => onViewChange('home')} className="cursor-pointer flex items-center gap-2 group">
-          <div className="h-10 transition-transform group-hover:scale-105">
+    <nav className="fixed w-full z-[100] px-6 py-6 pointer-events-none">
+      <div className="max-w-7xl mx-auto flex justify-between items-center bg-black/40 backdrop-blur-3xl border border-white/5 rounded-3xl p-3 px-8 pointer-events-auto shadow-2xl neon-border relative overflow-hidden">
+        <div className="scanline opacity-10"></div>
+        
+        <div onClick={() => onViewChange('home')} className="cursor-pointer flex items-center gap-4 group">
+          <div className="h-10 w-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 group-hover:border-blue-500/50 transition-all">
             <img 
               src="https://api.a0.dev/assets/image?text=WELS%20shoe%20brand%20logo%20modern%20minimalist&seed=123" 
-              alt="WELS Logo" 
-              className="h-full object-contain filter brightness-0 invert" 
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-                (e.target as any).parentElement.innerHTML = '<div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20"><span class="text-white text-lg font-black italic">W</span></div>';
-              }}
+              alt="WELS" 
+              className="h-7 object-contain invert" 
             />
           </div>
-          <div className="flex flex-col leading-none ml-1">
-            <span className="text-2xl font-black heading-font tracking-tighter gradient-text uppercase">WELS</span>
-          </div>
+          <span className="text-2xl font-black heading-font tracking-tighter gradient-text uppercase hidden xs:block">WELS</span>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-8">
-          <div className="hidden md:flex gap-6 items-center">
-            <button onClick={() => onViewChange('home')} className="text-[10px] font-black uppercase tracking-widest hover:text-blue-500 transition-colors">Home</button>
-            <button onClick={() => {
-               document.getElementById('products')?.scrollIntoView({behavior: 'smooth'});
-               onViewChange('home');
-            }} className="text-[10px] font-black uppercase tracking-widest hover:text-blue-500 transition-colors">Shop</button>
+        <div className="flex items-center gap-4 md:gap-10">
+          <div className="hidden md:flex gap-8 items-center">
+            {['Home', 'Shop', 'Vision'].map((link) => (
+              <button 
+                key={link}
+                onClick={() => link === 'Shop' ? document.getElementById('products')?.scrollIntoView({behavior: 'smooth'}) : onViewChange('home')}
+                className="text-[10px] font-black uppercase tracking-[0.3em] hover:text-blue-500 transition-all tech-font relative group"
+              >
+                {link}
+                <span className="absolute -bottom-2 left-0 w-0 h-[2px] bg-blue-600 transition-all group-hover:w-full"></span>
+              </button>
+            ))}
           </div>
           
-          <button onClick={() => onViewChange('cart')} className="relative p-2.5 hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10">
-            <i className="fas fa-shopping-bag text-lg"></i>
+          <div className="h-8 w-[1px] bg-white/10 hidden md:block"></div>
+
+          {user?.role === 'admin' && (
+            <button 
+              onClick={() => onViewChange('admin')}
+              className="hidden lg:flex items-center gap-2 bg-blue-600/20 text-blue-400 px-4 py-2 rounded-xl border border-blue-500/30 text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all"
+            >
+              <i className="fas fa-tools"></i> ADMIN_PANEL
+            </button>
+          )}
+
+          <button onClick={() => onViewChange('cart')} className="relative p-3 hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10 group">
+            <i className="fas fa-shopping-bag text-lg group-hover:scale-110 transition-transform"></i>
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-blue-600 text-[10px] font-black w-5 h-5 rounded-lg flex items-center justify-center border-2 border-[#0a0a0a] shadow-lg">
+              <span className="absolute -top-1 -right-1 bg-blue-600 text-[10px] font-black w-5 h-5 rounded-lg flex items-center justify-center border-2 border-[#0a0a0a] shadow-lg shadow-blue-600/40">
                 {cartCount}
               </span>
             )}
@@ -50,34 +62,31 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onViewChange, user, onLoginC
 
           {user ? (
             <div className="flex items-center gap-3">
-              {user.role === 'admin' && (
-                <button 
-                  onClick={() => onViewChange('admin')} 
-                  className="flex items-center gap-2 text-[10px] font-black tracking-widest text-purple-400 border border-purple-400/30 px-3 py-2 rounded-xl hover:bg-purple-400 hover:text-black transition-all"
-                >
-                  <i className="fas fa-cog"></i>
-                  <span className="hidden xs:inline">DASHBOARD</span>
-                </button>
-              )}
-              <div className="flex items-center gap-2 bg-white/5 pr-4 pl-1.5 py-1.5 rounded-xl border border-white/10">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-[11px] font-black shadow-lg">
+              <div 
+                onClick={() => user.role === 'admin' && onViewChange('admin')}
+                className="flex items-center gap-3 bg-white/5 p-1.5 pr-5 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all group cursor-pointer"
+              >
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-xs font-black shadow-lg shadow-blue-600/20 group-hover:rotate-12 transition-transform">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-xs font-bold hidden sm:inline max-w-[100px] truncate">{user.name}</span>
+                <div className="hidden sm:block">
+                   <p className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-0.5">{user.role === 'admin' ? 'MASTER_ADMIN' : 'Authorized User'}</p>
+                   <p className="text-[11px] font-bold tracking-tight truncate max-w-[80px]">{user.name}</p>
+                </div>
                 <button 
-                  onClick={onLogout} 
-                  className="ml-2 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-red-500 transition-all"
+                  onClick={(e) => { e.stopPropagation(); onLogout(); }} 
+                  className="ml-2 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-500/20 text-red-500 transition-all"
                 >
-                  <i className="fas fa-power-off text-[10px]"></i>
+                  <i className="fas fa-power-off text-xs"></i>
                 </button>
               </div>
             </div>
           ) : (
             <button 
               onClick={onLoginClick} 
-              className="bg-white text-black px-8 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95"
+              className="bg-white text-black px-10 py-3.5 rounded-2xl text-[10px] font-black tracking-[0.3em] hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95 tech-font"
             >
-              SIGN IN
+              LOGIN_SEC
             </button>
           )}
         </div>

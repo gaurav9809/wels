@@ -8,6 +8,10 @@ import AdminDashboard from './components/AdminDashboard';
 import AuthModal from './components/AuthModal';
 import ProductPage from './components/ProductPage';
 import Footer from './components/Footer';
+import Features from './components/Features';
+import Gallery from './components/Gallery';
+import Reviews from './components/Reviews';
+import About from './components/About';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import { Product, StoreService, SiteSettings } from './services/StoreService';
 
@@ -19,6 +23,25 @@ const App: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [filter, setFilter] = useState<string>('All');
   const [settings, setSettings] = useState<SiteSettings>(StoreService.getSettings());
+
+  useEffect(() => {
+    const currentSettings = StoreService.getSettings();
+    setSettings(currentSettings);
+    document.documentElement.style.setProperty('--accent', currentSettings.accentColor);
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    const reveals = document.querySelectorAll('.reveal');
+    reveals.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [view, filter]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('wels_user');
@@ -50,6 +73,9 @@ const App: React.FC = () => {
     setUser(userData);
     localStorage.setItem('wels_user', JSON.stringify(userData));
     setIsAuthOpen(false);
+    if (userData.role === 'admin') {
+      setView('admin');
+    }
   };
 
   const handleLogout = () => {
@@ -64,22 +90,19 @@ const App: React.FC = () => {
       setIsAuthOpen(true);
       return;
     }
-    
-    // CRITICAL: Passing user info here
     StoreService.createOrder({ 
       userId: user.email, 
       userName: user.name, 
       items: cart, 
       total: cart.reduce((a,b) => a + (b.product.price * b.qty), 0) 
     });
-    
     setCart([]);
     alert("Order Placed Successfully!");
     setView('home');
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen">
       <Navbar 
         cartCount={cart.reduce((a, b) => a + b.qty, 0)} 
         onViewChange={(v) => {
@@ -98,14 +121,22 @@ const App: React.FC = () => {
               settings={settings}
               onShopNow={() => document.getElementById('products')?.scrollIntoView({behavior: 'smooth'})} 
               onStoryClick={() => document.getElementById('about')?.scrollIntoView({behavior: 'smooth'})}
+              isAdmin={user?.role === 'admin'}
+              onEditClick={() => setView('admin')}
             />
+            {settings.showFeatures && <Features isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
             <Products 
               filter={filter} 
               onFilterChange={setFilter} 
               onAddToCart={addToCart} 
               onProductClick={(p) => { setSelectedProduct(p); setView('product'); }}
               productsPerRow={settings.productsPerRow}
+              isAdmin={user?.role === 'admin'}
+              onEditClick={() => setView('admin')}
             />
+            {settings.showAbout && <About isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
+            {settings.showGallery && <Gallery isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
+            {settings.showReviews && <Reviews />}
           </>
         )}
         
@@ -126,7 +157,10 @@ const App: React.FC = () => {
         )}
 
         {view === 'admin' && user?.role === 'admin' && (
-          <AdminDashboard onClose={() => setView('home')} />
+          <AdminDashboard onClose={() => {
+            setSettings(StoreService.getSettings());
+            setView('home');
+          }} />
         )}
       </main>
 

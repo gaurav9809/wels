@@ -15,19 +15,38 @@ export interface Product {
   variants: Variant[];
   isFeatured?: boolean;
   isHidden?: boolean;
+  orderWeight: number; // For manual positioning
+}
+
+export interface FeatureItem {
+  icon: string;
+  title: string;
+  desc: string;
+  stat: string;
 }
 
 export interface SiteSettings {
   heroTitle: string;
   heroSubtitle: string;
   heroImage: string;
+  aboutTitle: string;
+  aboutText: string;
+  aboutImage: string;
+  features: FeatureItem[];
   productsPerRow: number;
+  galleryImages: string[];
+  accentColor: string;
+  // Visibility Toggles
+  showFeatures: boolean;
+  showAbout: boolean;
+  showGallery: boolean;
+  showReviews: boolean;
 }
 
 export interface Order {
   id: string;
   userId: string;
-  userName?: string; // Added field
+  userName?: string;
   items: any[];
   total: number;
   date: string;
@@ -35,46 +54,47 @@ export interface Order {
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
-  heroTitle: "STEP INTO STYLE",
-  heroSubtitle: "WELS blends cutting-edge performance with futuristic aesthetics. Engineered for the bold, designed for the dreamers.",
-  heroImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=1000",
-  productsPerRow: 3
+  heroTitle: "BRAND_NAME_HERE",
+  heroSubtitle: "Your vision, your brand. Upload assets in Admin.",
+  heroImage: "",
+  aboutTitle: "OUR MISSION",
+  aboutText: "Edit this text in the admin panel to tell your brand's unique story.",
+  aboutImage: "",
+  features: [
+    { icon: 'fa-bolt', title: 'Feature 1', desc: 'Description here', stat: '99%' },
+    { icon: 'fa-wind', title: 'Feature 2', desc: 'Description here', stat: 'MAX' },
+    { icon: 'fa-shield-heart', title: 'Feature 3', desc: 'Description here', stat: 'SAFE' },
+    { icon: 'fa-microchip', title: 'Feature 4', desc: 'Description here', stat: 'LIVE' },
+  ],
+  galleryImages: [],
+  productsPerRow: 3,
+  accentColor: '#3b82f6',
+  showFeatures: true,
+  showAbout: true,
+  showGallery: true,
+  showReviews: true
 };
-
-const INITIAL_PRODUCTS: Product[] = [
-  { 
-    id: '1', 
-    name: 'WELS Alpha G1', 
-    price: 189, 
-    image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&q=80&w=600',
-    category: 'Running', 
-    description: 'Engineered for elite performance. The Alpha G1 features a responsive carbon plate and high-traction outsole.',
-    variants: [
-      {
-        color: 'Racing Green',
-        images: ['https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&q=80&w=600'],
-        sizes: [{ size: 8, stock: 10 }, { size: 9, stock: 5 }, { size: 10, stock: 0 }]
-      }
-    ],
-    isFeatured: true
-  }
-];
 
 export const StoreService = {
   getProducts: (): Product[] => {
     const data = localStorage.getItem('wels_products');
-    if (!data) {
-      localStorage.setItem('wels_products', JSON.stringify(INITIAL_PRODUCTS));
-      return INITIAL_PRODUCTS;
-    }
-    return JSON.parse(data);
+    const prods: Product[] = data ? JSON.parse(data) : [];
+    return prods.sort((a, b) => (a.orderWeight || 0) - (b.orderWeight || 0));
   },
   saveProduct: (product: Product) => {
     const products = StoreService.getProducts();
     const index = products.findIndex(p => p.id === product.id);
     if (index > -1) products[index] = product;
-    else products.push({ ...product, id: Date.now().toString() });
+    else products.push({ ...product, id: Date.now().toString(), orderWeight: products.length });
     localStorage.setItem('wels_products', JSON.stringify(products));
+  },
+  updateProductOrder: (orderedIds: string[]) => {
+    const products = StoreService.getProducts();
+    const updated = products.map(p => ({
+      ...p,
+      orderWeight: orderedIds.indexOf(p.id)
+    }));
+    localStorage.setItem('wels_products', JSON.stringify(updated));
   },
   deleteProduct: (id: string) => {
     const products = StoreService.getProducts().filter(p => p.id !== id);
@@ -86,6 +106,7 @@ export const StoreService = {
   },
   saveSettings: (settings: SiteSettings) => {
     localStorage.setItem('wels_settings', JSON.stringify(settings));
+    document.documentElement.style.setProperty('--accent', settings.accentColor);
   },
   getOrders: (): Order[] => {
     const data = localStorage.getItem('wels_orders');
