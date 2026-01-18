@@ -16,7 +16,7 @@ import { Product, StoreService, SiteSettings, ShippingInfo } from './services/St
 
 const App: React.FC = () => {
   const [view, setView] = useState<'home' | 'cart' | 'admin' | 'product'>('home');
-  const [activeType, setActiveType] = useState<'shoe' | 'tshirt' | 'all'>('shoe'); // Default to shoe
+  const [activeType, setActiveType] = useState<'shoe' | 'tshirt' | 'all'>('shoe');
   const [user, setUser] = useState<{name: string, email: string, role: string, avatar?: string} | null>(null);
   const [cart, setCart] = useState<{product: Product, qty: number}[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -24,14 +24,19 @@ const App: React.FC = () => {
   const [filter, setFilter] = useState<string>('All');
   const [settings, setSettings] = useState<SiteSettings>(StoreService.getSettings());
 
+  const refreshGlobalState = () => {
+    setSettings(StoreService.getSettings());
+  };
+
   useEffect(() => {
-    const refreshSettings = () => {
-      const currentSettings = StoreService.getSettings();
-      setSettings(currentSettings);
-      document.documentElement.style.setProperty('--accent', currentSettings.accentColor);
-    };
-    refreshSettings();
-  }, [view]);
+    refreshGlobalState();
+    window.addEventListener('store_updated', refreshGlobalState);
+    return () => window.removeEventListener('store_updated', refreshGlobalState);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent', settings.accentColor);
+  }, [settings]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -130,7 +135,6 @@ const App: React.FC = () => {
             {settings.showFeatures && <Features isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
             
             <div id="collection-anchor" className="scroll-mt-32">
-              {/* Conditional Rendering based on Navbar Selection */}
               {(activeType === 'shoe' || activeType === 'all') && (
                 <Products 
                   type="shoe"
@@ -185,10 +189,7 @@ const App: React.FC = () => {
         )}
 
         {view === 'admin' && user?.role === 'admin' && (
-          <AdminDashboard onClose={() => {
-            setSettings(StoreService.getSettings());
-            setView('home');
-          }} />
+          <AdminDashboard onClose={() => setView('home')} />
         )}
       </main>
 

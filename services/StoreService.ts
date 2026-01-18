@@ -12,7 +12,7 @@ export interface Product {
   image: string; 
   images: string[]; 
   category: string;
-  type: 'shoe' | 'tshirt'; // Distinguisher
+  type: 'shoe' | 'tshirt';
   description: string;
   variants: Variant[];
   isFeatured?: boolean;
@@ -90,6 +90,9 @@ const DEFAULT_SETTINGS: SiteSettings = {
 };
 
 export const StoreService = {
+  notifyChange: () => {
+    window.dispatchEvent(new Event('store_updated'));
+  },
   getProducts: (): Product[] => {
     const data = localStorage.getItem('wels_products');
     const prods: Product[] = data ? JSON.parse(data) : [];
@@ -108,18 +111,12 @@ export const StoreService = {
     if (index > -1) products[index] = product;
     else products.push({ ...product, id: Date.now().toString(), orderWeight: products.length });
     localStorage.setItem('wels_products', JSON.stringify(products));
-  },
-  updateProductOrder: (orderedIds: string[]) => {
-    const products = StoreService.getProducts();
-    const updated = products.map(p => ({
-      ...p,
-      orderWeight: orderedIds.indexOf(p.id)
-    }));
-    localStorage.setItem('wels_products', JSON.stringify(updated));
+    StoreService.notifyChange();
   },
   deleteProduct: (id: string) => {
     const products = StoreService.getProducts().filter(p => p.id !== id);
     localStorage.setItem('wels_products', JSON.stringify(products));
+    StoreService.notifyChange();
   },
   getSettings: (): SiteSettings => {
     const data = localStorage.getItem('wels_settings');
@@ -134,6 +131,7 @@ export const StoreService = {
   saveSettings: (settings: SiteSettings) => {
     localStorage.setItem('wels_settings', JSON.stringify(settings));
     document.documentElement.style.setProperty('--accent', settings.accentColor);
+    StoreService.notifyChange();
   },
   getOrders: (): Order[] => {
     const data = localStorage.getItem('wels_orders');
@@ -149,6 +147,7 @@ export const StoreService = {
     };
     orders.push(newOrder);
     localStorage.setItem('wels_orders', JSON.stringify(orders));
+    StoreService.notifyChange();
     return newOrder;
   }
 };

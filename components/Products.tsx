@@ -19,8 +19,14 @@ const Products: React.FC<Props> = ({ type, title, onAddToCart, onProductClick, f
   const tshirtCats = ['All', 'Oversized', 'Premium Cotton', 'Aesthetic'];
   const activeCats = type === 'shoe' ? shoeCats : tshirtCats;
 
-  useEffect(() => {
+  const loadProducts = () => {
     setProducts(StoreService.getProducts());
+  };
+
+  useEffect(() => {
+    loadProducts();
+    window.addEventListener('store_updated', loadProducts);
+    return () => window.removeEventListener('store_updated', loadProducts);
   }, []);
 
   const filteredProducts = products
@@ -65,8 +71,13 @@ const Products: React.FC<Props> = ({ type, title, onAddToCart, onProductClick, f
           const discountPercent = hasDiscount ? Math.round(((p.compareAtPrice! - p.price) / p.compareAtPrice!) * 100) : 0;
 
           return (
-            <div key={p.id} onClick={() => onProductClick(p)} className={`reveal group glass-card rounded-[3.5rem] overflow-hidden cursor-pointer relative flex flex-col transition-all duration-700 hover:-translate-y-4 hover:shadow-[0_40px_100px_rgba(59,130,246,0.15)] ${p.isFeatured ? 'border-blue-500/40 bg-blue-500/[0.05]' : 'border-white/5'}`}>
+            <div key={p.id} onClick={() => onProductClick(p)} className={`reveal group glass-card rounded-[3.5rem] overflow-hidden cursor-pointer relative flex flex-col transition-all duration-700 hover:-translate-y-4 hover:shadow-[0_40px_100px_rgba(59,130,246,0.15)] ${p.isFeatured ? 'border-blue-500/40 bg-blue-500/[0.05]' : 'border-white/5'} ${p.isHidden ? 'opacity-40 grayscale' : ''}`}>
               <div className="scanline"></div>
+              {p.isHidden && (
+                <div className="absolute inset-0 z-[40] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                   <span className="bg-red-600 text-white font-black px-6 py-2 rounded-full text-[10px] tracking-widest">STEALTH_MODE_ACTIVE</span>
+                </div>
+              )}
               {p.isFeatured && (
                 <div className="absolute top-8 left-8 z-30 flex items-center gap-2 bg-blue-600 text-[8px] font-black uppercase px-4 py-2 rounded-full shadow-2xl animate-pulse"><i className="fas fa-bolt"></i> ULTRA_EDITION</div>
               )}
