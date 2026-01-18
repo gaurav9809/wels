@@ -25,27 +25,23 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    const initApp = async () => {
-      // First, use local defaults so UI shows up instantly
-      setSettings(StoreService.getSettings());
-      
-      // Then try to fetch fresh cloud data
-      await StoreService.fetchAllData();
-      setSettings(StoreService.getSettings());
-      
-      // Short delay for splash feel
-      setTimeout(() => setIsInitialLoading(false), 1000);
-    };
-    initApp();
+    // Initial data load - immediate
+    setSettings(StoreService.getSettings());
 
     const handleUpdate = () => {
       setSettings(StoreService.getSettings());
     };
     window.addEventListener('store_updated', handleUpdate);
-    return () => window.removeEventListener('store_updated', handleUpdate);
+    
+    // Trigger any scroll reveal elements to be active immediately
+    const reveals = document.querySelectorAll('.reveal');
+    reveals.forEach(el => el.classList.add('active'));
+
+    return () => {
+      window.removeEventListener('store_updated', handleUpdate);
+    };
   }, []);
 
   const handleAddToCart = (product: Product) => {
@@ -58,7 +54,7 @@ export const App: React.FC = () => {
     });
   };
 
-  const handleCheckout = async (shipping: ShippingInfo, paymentMethod: string) => {
+  const handleCheckout = (shipping: ShippingInfo, paymentMethod: string) => {
     const total = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
     const order: Order = {
       id: `ORD-${Date.now()}`,
@@ -71,23 +67,12 @@ export const App: React.FC = () => {
     
     const orders = StoreService.getOrders();
     orders.push(order);
-    localStorage.setItem('wels_global_orders', JSON.stringify(orders));
-    await StoreService.syncToCloud();
+    localStorage.setItem('wels_orders', JSON.stringify(orders));
     
     alert('ORDER PLACED SUCCESSFULLY!');
     setCart([]);
     setView('home');
   };
-
-  if (isInitialLoading) {
-    return (
-      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-[200]">
-        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-        <h1 className="tech-font text-xl font-black gradient-text tracking-[0.3em] uppercase mb-2">WELS SYSTEMS</h1>
-        <p className="tech-font text-[8px] text-blue-500 tracking-[0.5em] uppercase animate-pulse">Initializing_Aesthetic_Matrix</p>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-black text-white min-h-screen selection:bg-blue-500 selection:text-white">
@@ -103,7 +88,7 @@ export const App: React.FC = () => {
 
       <main className="pt-2">
         {view === 'home' && (
-          <div className="animate-in fade-in duration-1000">
+          <div className="animate-in fade-in duration-500">
             <Hero 
               settings={settings} 
               onShopNow={() => document.getElementById('products')?.scrollIntoView({behavior: 'smooth'})}
