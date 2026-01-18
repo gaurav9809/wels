@@ -9,13 +9,14 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image: string; // This will act as the primary thumbnail
+  images: string[]; // Added array for multiple shoe angles/photos
   category: string;
   description: string;
   variants: Variant[];
   isFeatured?: boolean;
   isHidden?: boolean;
-  orderWeight: number; // For manual positioning
+  orderWeight: number;
 }
 
 export interface FeatureItem {
@@ -36,7 +37,6 @@ export interface SiteSettings {
   productsPerRow: number;
   galleryImages: string[];
   accentColor: string;
-  // Visibility Toggles
   showFeatures: boolean;
   showAbout: boolean;
   showGallery: boolean;
@@ -79,10 +79,18 @@ export const StoreService = {
   getProducts: (): Product[] => {
     const data = localStorage.getItem('wels_products');
     const prods: Product[] = data ? JSON.parse(data) : [];
-    return prods.sort((a, b) => (a.orderWeight || 0) - (b.orderWeight || 0));
+    // Ensure legacy products have the images array
+    return prods.map(p => ({
+      ...p,
+      images: p.images || (p.image ? [p.image] : [])
+    })).sort((a, b) => (a.orderWeight || 0) - (b.orderWeight || 0));
   },
   saveProduct: (product: Product) => {
     const products = StoreService.getProducts();
+    // Sync the primary thumbnail to the first image in the array if available
+    if (product.images && product.images.length > 0) {
+      product.image = product.images[0];
+    }
     const index = products.findIndex(p => p.id === product.id);
     if (index > -1) products[index] = product;
     else products.push({ ...product, id: Date.now().toString(), orderWeight: products.length });

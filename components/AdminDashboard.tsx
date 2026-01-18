@@ -28,6 +28,34 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
     }
   };
 
+  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>, currentImages: string[]) => {
+    const files = Array.from(e.target.files || []);
+    const readers = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // Fix: Explicitly cast the result of Promise.all to string[] to avoid 'unknown' assignment error
+    Promise.all(readers).then((newImages: string[]) => {
+      if (editing) {
+        setEditing({
+          ...editing,
+          images: [...(editing.images || []), ...newImages]
+        });
+      }
+    });
+  };
+
+  const removeImage = (index: number) => {
+    if (!editing || !editing.images) return;
+    const updated = [...editing.images];
+    updated.splice(index, 1);
+    setEditing({ ...editing, images: updated });
+  };
+
   const moveProduct = (index: number, direction: 'up' | 'down') => {
     const newProducts = [...products];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -68,7 +96,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
               <h2 className="text-xl font-black uppercase tracking-tight">Product Alignment</h2>
               <p className="text-xs text-gray-500 mt-1">Move products to adjust their position on the home page</p>
             </div>
-            <button onClick={() => setEditing({ name: '', price: 0, image: '', category: 'Casual', variants: [], orderWeight: products.length })} className="bg-white text-black px-8 py-4 rounded-xl font-black text-xs uppercase hover:bg-blue-600 hover:text-white transition-all">Add_New_Shoe</button>
+            <button onClick={() => setEditing({ name: '', price: 0, image: '', images: [], category: 'Casual', variants: [], orderWeight: products.length })} className="bg-white text-black px-8 py-4 rounded-xl font-black text-xs uppercase hover:bg-blue-600 hover:text-white transition-all">Add_New_Shoe</button>
           </div>
 
           <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/10">
@@ -77,7 +105,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                 <tr className="text-[10px] uppercase text-gray-500 font-black tracking-widest">
                   <th className="p-8">Visual_Index</th>
                   <th className="p-8">Entity_Data</th>
-                  <th className="p-8">Status</th>
+                  <th className="p-8">Media_Count</th>
                   <th className="p-8 text-right">Sequence_Actions</th>
                 </tr>
               </thead>
@@ -100,9 +128,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                       </div>
                     </td>
                     <td className="p-8">
-                       <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${p.isHidden ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20'}`}>
-                         {p.isHidden ? 'Hidden' : 'Visible'}
-                       </span>
+                       <span className="text-[10px] font-black tech-font text-gray-400">[{p.images?.length || 1} FILES]</span>
                     </td>
                     <td className="p-8 text-right">
                       <button onClick={() => setEditing(p)} className="text-blue-500 mr-6 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all">Edit_Data</button>
@@ -140,24 +166,6 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                 </div>
               ))}
             </div>
-            
-            <h2 className="text-xl font-black uppercase text-purple-500 flex items-center gap-3 mt-12">
-               <i className="fas fa-th"></i> Grid Configuration
-            </h2>
-            <div className="p-8 bg-white/5 rounded-2xl border border-white/5">
-               <p className="text-[10px] font-black uppercase text-gray-500 mb-6 tracking-widest">Products Per Row</p>
-               <div className="flex gap-4">
-                  {[1, 2, 3, 4].map(num => (
-                    <button 
-                      key={num}
-                      onClick={() => setSettings({...settings, productsPerRow: num})}
-                      className={`flex-1 py-4 rounded-xl font-black transition-all border ${settings.productsPerRow === num ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/5 border-white/10 text-gray-500'}`}
-                    >
-                      {num}
-                    </button>
-                  ))}
-               </div>
-            </div>
           </div>
 
           <div className="glass-card p-10 rounded-[3rem] space-y-8 border-white/10">
@@ -175,21 +183,8 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
                        style={{ backgroundColor: color }}
                      ></button>
                    ))}
-                   <input 
-                     type="color" 
-                     value={settings.accentColor} 
-                     onChange={e => setSettings({...settings, accentColor: e.target.value})}
-                     className="w-14 h-14 bg-transparent border-none cursor-pointer"
-                   />
                 </div>
              </div>
-             
-             <div className="p-8 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
-                <p className="text-xs text-blue-400 italic leading-relaxed">
-                  Tip: Changes to components visibility and grid layouts are reflected instantly on the main site. Use the accent color to match your product drops.
-                </p>
-             </div>
-
              <button onClick={handleSaveSettings} className="w-full bg-white text-black py-6 rounded-2xl font-black uppercase text-[10px] tracking-[0.4em] hover:bg-blue-600 hover:text-white transition-all tech-font shadow-2xl">
                Execute_Layout_Save
              </button>
@@ -197,100 +192,85 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
         </div>
       )}
 
-      {activeTab === 'cms' && (
-        <div className="grid lg:grid-cols-2 gap-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="glass-card p-10 rounded-[3.5rem] space-y-8 border-white/10">
-            <h2 className="text-xl font-black uppercase text-blue-500">Home Hero Setup</h2>
-            <div className="space-y-4">
-              <input placeholder="Primary Title Line" value={settings.heroTitle} onChange={e => setSettings({...settings, heroTitle: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
-              <textarea placeholder="Supporting Mission Statement" value={settings.heroSubtitle} onChange={e => setSettings({...settings, heroSubtitle: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 h-32 outline-none focus:border-blue-500" />
-              <div className="p-6 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[10px] font-black uppercase text-gray-500 mb-4 tracking-widest">Hero Core Visual</p>
-                <input type="file" onChange={e => handleFileUpload(e, (b) => setSettings({...settings, heroImage: b}))} className="text-[10px] tech-font" />
-              </div>
-            </div>
-
-            <h2 className="text-xl font-black uppercase text-purple-500 mt-12">Legacy & About</h2>
-            <div className="space-y-4">
-              <input placeholder="About Header" value={settings.aboutTitle} onChange={e => setSettings({...settings, aboutTitle: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-purple-500" />
-              <textarea placeholder="Your Brand History" value={settings.aboutText} onChange={e => setSettings({...settings, aboutText: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 h-32 outline-none focus:border-purple-500" />
-              <div className="p-6 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[10px] font-black uppercase text-gray-500 mb-4 tracking-widest">Supporting Image</p>
-                <input type="file" onChange={e => handleFileUpload(e, (b) => setSettings({...settings, aboutImage: b}))} className="text-[10px] tech-font" />
-              </div>
-            </div>
-            
-            <button onClick={handleSaveSettings} className="w-full bg-blue-600 py-6 rounded-2xl font-black uppercase text-[10px] tracking-[0.4em] hover:bg-white hover:text-black transition-all shadow-2xl tech-font mt-10">
-              Synchronize_CMS_Data
-            </button>
-          </div>
-
-          <div className="glass-card p-10 rounded-[3.5rem] space-y-8 border-white/10">
-             <h2 className="text-xl font-black uppercase text-green-500">Core Performance Features</h2>
-             {settings.features.map((f, i) => (
-               <div key={i} className="p-8 bg-white/5 rounded-3xl space-y-6 border border-white/5">
-                 <div className="flex gap-4">
-                    <div className="flex-1">
-                      <p className="text-[8px] font-black uppercase text-gray-600 mb-2">ICON CODE (FontAwesome)</p>
-                      <input placeholder="fa-bolt" value={f.icon} onChange={e => {
-                        const nf = [...settings.features]; nf[i].icon = e.target.value; setSettings({...settings, features: nf});
-                      }} className="w-full bg-black/40 p-4 rounded-xl text-xs border border-white/5 focus:border-green-500" />
-                    </div>
-                    <div className="w-32">
-                      <p className="text-[8px] font-black uppercase text-gray-600 mb-2">STATIC DATA</p>
-                      <input placeholder="99%" value={f.stat} onChange={e => {
-                        const nf = [...settings.features]; nf[i].stat = e.target.value; setSettings({...settings, features: nf});
-                      }} className="w-full bg-black/40 p-4 rounded-xl text-xs border border-white/5 focus:border-green-500" />
-                    </div>
-                 </div>
-                 <input placeholder="Feature Heading" value={f.title} onChange={e => {
-                    const nf = [...settings.features]; nf[i].title = e.target.value; setSettings({...settings, features: nf});
-                 }} className="w-full bg-black/40 p-4 rounded-xl text-xs border border-white/5 focus:border-green-500 font-bold" />
-                 <textarea placeholder="Brief Definition" value={f.desc} onChange={e => {
-                    const nf = [...settings.features]; nf[i].desc = e.target.value; setSettings({...settings, features: nf});
-                 }} className="w-full bg-black/40 p-4 rounded-xl text-xs h-24 border border-white/5 focus:border-green-500" />
-               </div>
-             ))}
-          </div>
-        </div>
-      )}
-
       {editing && (
-        <div className="fixed inset-0 z-[200] bg-black/98 flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="glass-card w-full max-w-2xl p-12 rounded-[4rem] space-y-8 border-blue-500/20 shadow-[0_0_100px_rgba(59,130,246,0.1)]">
-            <h2 className="text-4xl font-black uppercase heading-font tracking-tighter italic">Entity <span className="text-blue-500">Mod_Tool</span></h2>
+        <div className="fixed inset-0 z-[200] bg-black/98 flex items-center justify-center p-6 animate-in fade-in duration-300 overflow-y-auto">
+          <div className="glass-card w-full max-w-4xl p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] space-y-8 border-blue-500/20 shadow-[0_0_100px_rgba(59,130,246,0.1)] my-10">
+            <h2 className="text-3xl md:text-4xl font-black uppercase heading-font tracking-tighter italic">Entity <span className="text-blue-500">Mod_Tool</span></h2>
             
-            <div className="space-y-4">
-              <input placeholder="Product Identity" value={editing.name} onChange={e => setEditing({...editing, name: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <input placeholder="Valuation ($)" type="number" value={editing.price} onChange={e => setEditing({...editing, price: Number(e.target.value)})} className="bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
-                <select value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})} className="bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500">
-                  <option className="bg-black">Running</option>
-                  <option className="bg-black">Casual</option>
-                  <option className="bg-black">Training</option>
-                </select>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Product Identity</label>
+                  <input placeholder="Shoe Name" value={editing.name} onChange={e => setEditing({...editing, name: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Price ($)</label>
+                    <input placeholder="Valuation" type="number" value={editing.price} onChange={e => setEditing({...editing, price: Number(e.target.value)})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Category</label>
+                    <select value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500">
+                      <option className="bg-black">Running</option>
+                      <option className="bg-black">Casual</option>
+                      <option className="bg-black">Training</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                   <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Description</label>
+                   <textarea value={editing.description} onChange={e => setEditing({...editing, description: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 h-32 outline-none focus:border-blue-500" placeholder="Product details..."></textarea>
+                </div>
               </div>
 
-              <div className="flex items-center gap-6 p-6 bg-white/5 rounded-2xl border border-white/5">
-                 <div className="flex items-center gap-3">
-                   <input type="checkbox" checked={editing.isFeatured} onChange={e => setEditing({...editing, isFeatured: e.target.checked})} className="w-5 h-5 accent-blue-600" id="feat" />
-                   <label htmlFor="feat" className="text-[10px] font-black uppercase tracking-widest text-blue-500 cursor-pointer">Featured_Status</label>
-                 </div>
-                 <div className="flex items-center gap-3">
-                   <input type="checkbox" checked={editing.isHidden} onChange={e => setEditing({...editing, isHidden: e.target.checked})} className="w-5 h-5 accent-red-600" id="hide" />
-                   <label htmlFor="hide" className="text-[10px] font-black uppercase tracking-widest text-red-500 cursor-pointer">Deactivate_View</label>
-                 </div>
-              </div>
+              <div className="space-y-6">
+                <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
+                  <div className="flex justify-between items-center mb-6">
+                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Media Gallery</label>
+                    <label className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest cursor-pointer hover:bg-blue-500 transition-all">
+                      <i className="fas fa-plus mr-2"></i> Add_Photos
+                      <input type="file" multiple onChange={e => handleMultipleFiles(e, editing.images || [])} className="hidden" />
+                    </label>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {editing.images && editing.images.map((img, i) => (
+                      <div key={i} className="relative group aspect-square bg-black/40 rounded-xl overflow-hidden border border-white/5">
+                        <img src={img} className="w-full h-full object-contain p-2" />
+                        <button 
+                          onClick={() => removeImage(i)}
+                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-lg flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                        {i === 0 && <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded-md uppercase">Cover</span>}
+                      </div>
+                    ))}
+                    {(!editing.images || editing.images.length === 0) && (
+                      <div className="col-span-3 py-10 text-center border-2 border-dashed border-white/5 rounded-xl text-gray-600 text-[10px] uppercase font-black tracking-widest">
+                        Zero Media detected
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[8px] text-gray-500 mt-4 italic uppercase">Note: The first image is the primary thumbnail.</p>
+                </div>
 
-              <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
-                <p className="text-[10px] font-black uppercase text-gray-500 mb-4 tracking-widest">Primary Shoe Visual</p>
-                <input type="file" onChange={e => handleFileUpload(e, (b) => setEditing({...editing, image: b}))} className="text-[10px] tech-font" />
-                {editing.image && <img src={editing.image} className="w-20 h-20 object-contain mt-4 opacity-50" />}
+                <div className="flex items-center gap-6 p-6 bg-white/5 rounded-2xl border border-white/5">
+                   <div className="flex items-center gap-3">
+                     <input type="checkbox" checked={editing.isFeatured} onChange={e => setEditing({...editing, iFeatured: e.target.checked})} className="w-5 h-5 accent-blue-600" id="feat" />
+                     <label htmlFor="feat" className="text-[10px] font-black uppercase tracking-widest text-blue-500 cursor-pointer">Featured_Status</label>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <input type="checkbox" checked={editing.isHidden} onChange={e => setEditing({...editing, isHidden: e.target.checked})} className="w-5 h-5 accent-red-600" id="hide" />
+                     <label htmlFor="hide" className="text-[10px] font-black uppercase tracking-widest text-red-500 cursor-pointer">Deactivate_View</label>
+                   </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-4 border-t border-white/5">
               <button onClick={() => { StoreService.saveProduct(editing as Product); setEditing(null); refreshData(); }} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] hover:bg-blue-600 hover:text-white transition-all shadow-xl">Commit_Entry</button>
               <button onClick={() => setEditing(null)} className="px-10 bg-white/5 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] border border-white/10 hover:bg-white/10 transition-all">Abort</button>
             </div>
