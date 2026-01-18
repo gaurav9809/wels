@@ -24,9 +24,13 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<SiteSettings>(StoreService.getSettings());
 
   useEffect(() => {
-    const currentSettings = StoreService.getSettings();
-    setSettings(currentSettings);
-    document.documentElement.style.setProperty('--accent', currentSettings.accentColor);
+    const refreshSettings = () => {
+      const currentSettings = StoreService.getSettings();
+      setSettings(currentSettings);
+      document.documentElement.style.setProperty('--accent', currentSettings.accentColor);
+    };
+    
+    refreshSettings();
     
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -101,6 +105,8 @@ const App: React.FC = () => {
     alert(`Order Placed Successfully using ${paymentMethod}! Tracking details sent to ${shipping.phone}`);
     setView('home');
   };
+
+  if (!settings) return null;
 
   return (
     <div className="min-h-screen">

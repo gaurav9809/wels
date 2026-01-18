@@ -8,7 +8,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  compareAtPrice?: number; // Original price before discount
+  compareAtPrice?: number;
   image: string; 
   images: string[]; 
   category: string;
@@ -65,17 +65,17 @@ export interface Order {
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
-  heroTitle: "BRAND_NAME_HERE",
-  heroSubtitle: "Your vision, your brand. Upload assets in Admin.",
-  heroImage: "",
+  heroTitle: "WELS FOOTWEAR",
+  heroSubtitle: "Experience the next generation of athletic excellence. Built for the bold.",
+  heroImage: "https://api.a0.dev/assets/image?text=premium%20futuristic%20sneaker%20floating%20blue%20neon&seed=99",
   aboutTitle: "OUR MISSION",
-  aboutText: "Edit this text in the admin panel to tell your brand's unique story.",
-  aboutImage: "",
+  aboutText: "We blend high-performance engineering with street-ready aesthetics to create footwear that moves at the speed of your life.",
+  aboutImage: "https://api.a0.dev/assets/image?text=aesthetic%20shoe%20manufacturing%20process%20neon&seed=44",
   features: [
-    { icon: 'fa-bolt', title: 'Feature 1', desc: 'Description here', stat: '99%' },
-    { icon: 'fa-wind', title: 'Feature 2', desc: 'Description here', stat: 'MAX' },
-    { icon: 'fa-shield-heart', title: 'Feature 3', desc: 'Description here', stat: 'SAFE' },
-    { icon: 'fa-microchip', title: 'Feature 4', desc: 'Description here', stat: 'LIVE' },
+    { icon: 'fa-bolt', title: 'Energy Return', desc: 'Dual-density foam for max bounce.', stat: '98%' },
+    { icon: 'fa-wind', title: 'Breathable', desc: 'Precision engineered mesh tech.', stat: 'MAX' },
+    { icon: 'fa-shield-heart', title: 'Durability', desc: 'Reinforced stress points.', stat: 'SAFE' },
+    { icon: 'fa-microchip', title: 'Smart Fit', desc: 'Adaptive lacing system.', stat: 'LIVE' },
   ],
   galleryImages: [],
   productsPerRow: 3,
@@ -111,7 +111,6 @@ export const StoreService = {
       ...p,
       orderWeight: orderedIds.indexOf(p.id)
     }));
-    localStorage.setItem('wels_updated_products', JSON.stringify(updated));
     localStorage.setItem('wels_products', JSON.stringify(updated));
   },
   deleteProduct: (id: string) => {
@@ -120,7 +119,14 @@ export const StoreService = {
   },
   getSettings: (): SiteSettings => {
     const data = localStorage.getItem('wels_settings');
-    return data ? JSON.parse(data) : DEFAULT_SETTINGS;
+    if (!data) return DEFAULT_SETTINGS;
+    try {
+      const parsed = JSON.parse(data);
+      // Merge with defaults to ensure all required arrays/keys exist
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    } catch (e) {
+      return DEFAULT_SETTINGS;
+    }
   },
   saveSettings: (settings: SiteSettings) => {
     localStorage.setItem('wels_settings', JSON.stringify(settings));
