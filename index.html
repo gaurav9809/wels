@@ -3,7 +3,7 @@
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>WELS | Zenith Futurist Footwear</title>
     <link rel="icon" type="image/png" href="https://api.a0.dev/assets/image?text=WELS%20shoe%20brand%20logo%20modern%20minimalist&seed=123">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,6 +23,7 @@
             overflow-x: hidden;
             margin: 0;
             min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
         }
         .heading-font { font-family: 'Syncopate', sans-serif; letter-spacing: -0.05em; }
         .tech-font { font-family: 'Orbitron', sans-serif; }
@@ -34,28 +35,24 @@
 
         .glass-card {
             background: rgba(255, 255, 255, 0.01);
-            backdrop-filter: blur(25px) saturate(180%);
+            backdrop-filter: blur(15px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
         }
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            transition: 0.5s;
-        }
-        .glass-card:hover::before { left: 100%; }
         
+        @media (min-width: 768px) {
+            .glass-card { backdrop-filter: blur(25px) saturate(180%); }
+        }
+
         .neon-border {
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.1);
         }
         .neon-border:hover {
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
-            border: 1px solid rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
         }
 
         .gradient-text {
@@ -67,34 +64,25 @@
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        .shoe-shadow { filter: drop-shadow(0 0 50px rgba(59, 130, 246, 0.2)); }
+        .shoe-shadow { filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.15)); }
         
-        /* Kinetic Reveals */
         .reveal {
             opacity: 0;
-            transform: translateY(60px) rotateX(10deg);
-            transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+            transform: translateY(30px);
+            transition: all 1s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .reveal.active {
             opacity: 1;
-            transform: translateY(0) rotateX(0);
+            transform: translateY(0);
         }
 
-        .floating-circles {
-            position: absolute;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.03);
-            pointer-events: none;
-        }
-
-        /* Magnetic Scan Effect */
         .scanline {
             width: 100%;
-            height: 2px;
+            height: 1px;
             background: linear-gradient(to right, transparent, var(--accent), transparent);
             position: absolute;
-            animation: scan 4s linear infinite;
-            opacity: 0.3;
+            animation: scan 6s linear infinite;
+            opacity: 0.2;
             z-index: 10;
         }
         @keyframes scan {
@@ -102,14 +90,8 @@
             100% { top: 110%; }
         }
 
-        /* HUD Typography */
-        .hud-data {
-            font-size: 10px;
-            font-weight: 900;
-            letter-spacing: 0.5em;
-            color: var(--accent);
-            text-transform: uppercase;
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 <script type="importmap">
 {
@@ -125,9 +107,8 @@
 </head>
 <body>
     <div class="fixed inset-0 z-[-1] pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full animate-pulse"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/5 blur-[120px] rounded-full animate-pulse"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.02]" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 40px 40px;"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-600/5 blur-[100px] rounded-full animate-pulse"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/5 blur-[100px] rounded-full animate-pulse"></div>
     </div>
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
