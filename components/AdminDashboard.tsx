@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { StoreService, Product, Order, SiteSettings } from '../services/StoreService';
 
 const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'inventory' | 'cms' | 'layout' | 'orders'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'layout' | 'orders'>('inventory');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<SiteSettings>(StoreService.getSettings());
@@ -14,15 +13,58 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
   }, []);
 
   const refreshData = () => {
-    setProducts(StoreService.getProducts());
-    setOrders(StoreService.getOrders());
-    setSettings(StoreService.getSettings());
+    try {
+      setProducts(StoreService.getProducts());
+      setOrders(StoreService.getOrders());
+      setSettings(StoreService.getSettings());
+    } catch (err) {
+      console.error("Dashboard refresh failed:", err);
+    }
+  };
+
+  /**
+   * Compression Utility: Resizes images to max 1024px and applies JPEG compression
+   * to prevent localStorage QuotaExceededError.
+   */
+  const compressImage = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(base64Str);
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        // Use image/jpeg with 0.7 quality for significant size reduction
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = () => resolve(base64Str);
+    });
   };
 
   const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    // Fix: Explicitly type the Promise as string to avoid 'unknown' assignment issues
-    const readers = files.map(file => {
+    const readers = files.map((file: File) => {
       return new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -30,12 +72,15 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
       });
     });
 
-    Promise.all(readers).then((newImages: string[]) => {
+    Promise.all(readers).then(async (newImages: string[]) => {
+      // Compress each new image before adding to state
+      const compressedImages = await Promise.all(newImages.map(img => compressImage(img)));
+      
       if (editing) {
         const currentImages = editing.images || [];
         setEditing({
           ...editing,
-          images: [...currentImages, ...newImages]
+          images: [...currentImages, ...compressedImages]
         });
       }
     });
@@ -48,34 +93,48 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
     setEditing({ ...editing, images: updated });
   };
 
-  const handleCommit = () => {
-    if (!editing || !editing.name) {
-      alert("Error: Shoe Name is required.");
+  const handleCommit = async () => {
+    if (!editing || !editing.name || editing.name.trim() === '') {
+      alert("FIELD_ERROR: Shoe Name is required for system indexing.");
       return;
     }
 
-    // Explicitly construct the final Product object to ensure all fields are present
-    const finalProduct: Product = {
-      id: editing.id || Date.now().toString(),
-      name: editing.name,
-      price: editing.price || 0,
-      category: editing.category || "Casual",
-      description: editing.description || "",
-      images: editing.images || [],
-      // Ensure the main image property is always the first one in the gallery
-      image: (editing.images && editing.images.length > 0) ? editing.images[0] : (editing.image || ""),
-      isFeatured: editing.isFeatured || false,
-      isHidden: editing.isHidden || false,
-      variants: editing.variants || [],
-      orderWeight: editing.orderWeight !== undefined ? editing.orderWeight : products.length
-    };
+    try {
+      const finalImages = editing.images || [];
+      const primaryImage = finalImages.length > 0 ? finalImages[0] : (editing.image || "");
 
-    StoreService.saveProduct(finalProduct);
-    
-    // Reset state and notify user
-    setEditing(null);
-    refreshData();
-    alert("SYSTEM: Entity committed to local storage successfully.");
+      if (!primaryImage) {
+        alert("MEDIA_ERROR: At least one visual asset is required.");
+        return;
+      }
+
+      const payload: Product = {
+        id: editing.id || Date.now().toString(),
+        name: editing.name.trim(),
+        price: Number(editing.price) || 0,
+        category: editing.category || "Casual",
+        description: editing.description || "Premium performance unit designed for elite performance.",
+        images: finalImages,
+        image: primaryImage,
+        isFeatured: Boolean(editing.isFeatured),
+        isHidden: Boolean(editing.isHidden),
+        variants: editing.variants || [],
+        orderWeight: editing.orderWeight !== undefined ? editing.orderWeight : products.length
+      };
+
+      StoreService.saveProduct(payload);
+      
+      setEditing(null);
+      refreshData();
+      alert("SUCCESS: Database record committed and indexed.");
+    } catch (err: any) {
+      console.error("COMMIT_FAILED:", err);
+      if (err.name === 'QuotaExceededError' || err.message?.includes('quota')) {
+        alert("STORAGE_CRITICAL: Memory Full. Try removing some high-res images or clearing older products.");
+      } else {
+        alert("FATAL_ERROR: Record commit rejected by system.");
+      }
+    }
   };
 
   const moveProduct = (index: number, direction: 'up' | 'down') => {
@@ -90,7 +149,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
   const handleSaveSettings = () => {
     StoreService.saveSettings(settings);
-    alert('Site layout and theme updated.');
+    alert('System settings synced successfully.');
     refreshData();
   };
 
@@ -102,7 +161,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
           <p className="text-[10px] tech-font text-gray-600 uppercase tracking-widest mt-2">Manage your digital storefront universe</p>
         </div>
         <div className="flex flex-wrap justify-center gap-2">
-          {['inventory', 'layout', 'cms', 'orders'].map(tab => (
+          {['inventory', 'layout', 'orders'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab as any)} className={`text-[9px] font-black px-5 py-3 rounded-xl transition-all uppercase tracking-widest border ${activeTab === tab ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/5 text-gray-500 border-white/10 hover:border-white/20'}`}>
               {tab}
             </button>
@@ -214,6 +273,30 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
         </div>
       )}
 
+      {activeTab === 'orders' && (
+        <div className="glass-card p-10 rounded-[3rem] border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-xl font-black uppercase mb-10 text-purple-500">Global Sales Pipeline</h2>
+          {orders.length === 0 ? (
+            <div className="text-center py-20 text-gray-500 tech-font uppercase tracking-widest text-[10px]">No transaction history found</div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map(order => (
+                <div key={order.id} className="p-6 bg-white/5 rounded-2xl border border-white/5 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] tech-font text-blue-500 mb-1">{order.id}</p>
+                    <p className="font-black uppercase">{order.userName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-lg">${order.total}</p>
+                    <p className="text-[10px] text-gray-500">{order.date}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {editing && (
         <div className="fixed inset-0 z-[200] bg-black/98 flex items-center justify-center p-6 animate-in fade-in duration-300 overflow-y-auto">
           <div className="glass-card w-full max-w-4xl p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] space-y-8 border-blue-500/20 shadow-[0_0_100px_rgba(59,130,246,0.1)] my-10">
@@ -223,17 +306,17 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Product Identity</label>
-                  <input placeholder="Shoe Name" value={editing.name} onChange={e => setEditing({...editing, name: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
+                  <input placeholder="Shoe Name" value={editing.name} onChange={e => setEditing({...editing, name: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500 text-white" />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Price ($)</label>
-                    <input placeholder="Valuation" type="number" value={editing.price} onChange={e => setEditing({...editing, price: Number(e.target.value)})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500" />
+                    <input placeholder="Valuation" type="number" value={editing.price} onChange={e => setEditing({...editing, price: Number(e.target.value)})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500 text-white" />
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Category</label>
-                    <select value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500">
+                    <select value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 outline-none focus:border-blue-500 text-white">
                       <option className="bg-black" value="Running">Running</option>
                       <option className="bg-black" value="Casual">Casual</option>
                       <option className="bg-black" value="Training">Training</option>
@@ -243,7 +326,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
                 <div>
                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block tracking-widest">Description</label>
-                   <textarea value={editing.description} onChange={e => setEditing({...editing, description: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 h-32 outline-none focus:border-blue-500" placeholder="Product details..."></textarea>
+                   <textarea value={editing.description} onChange={e => setEditing({...editing, description: e.target.value})} className="w-full bg-white/5 p-5 rounded-2xl border border-white/10 h-32 outline-none focus:border-blue-500 text-white" placeholder="Product details..."></textarea>
                 </div>
               </div>
 
@@ -294,7 +377,7 @@ const AdminDashboard: React.FC<{onClose: () => void}> = ({ onClose }) => {
 
             <div className="flex gap-4 pt-4 border-t border-white/5">
               <button onClick={handleCommit} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] hover:bg-blue-600 hover:text-white transition-all shadow-xl">Commit_Entry</button>
-              <button onClick={() => setEditing(null)} className="px-10 bg-white/5 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] border border-white/10 hover:bg-white/10 transition-all">Abort</button>
+              <button onClick={() => setEditing(null)} className="px-10 bg-white/5 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] border border-white/10 hover:bg-white/10 transition-all text-white">Abort</button>
             </div>
           </div>
         </div>
