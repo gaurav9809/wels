@@ -8,8 +8,9 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  image: string; // This will act as the primary thumbnail
-  images: string[]; // Added array for multiple shoe angles/photos
+  compareAtPrice?: number; // Original price before discount
+  image: string; 
+  images: string[]; 
   category: string;
   description: string;
   variants: Variant[];
@@ -89,7 +90,6 @@ export const StoreService = {
   getProducts: (): Product[] => {
     const data = localStorage.getItem('wels_products');
     const prods: Product[] = data ? JSON.parse(data) : [];
-    // Ensure legacy products have the images array
     return prods.map(p => ({
       ...p,
       images: p.images || (p.image ? [p.image] : [])
@@ -97,7 +97,6 @@ export const StoreService = {
   },
   saveProduct: (product: Product) => {
     const products = StoreService.getProducts();
-    // Sync the primary thumbnail to the first image in the array if available
     if (product.images && product.images.length > 0) {
       product.image = product.images[0];
     }
@@ -112,6 +111,7 @@ export const StoreService = {
       ...p,
       orderWeight: orderedIds.indexOf(p.id)
     }));
+    localStorage.setItem('wels_updated_products', JSON.stringify(updated));
     localStorage.setItem('wels_products', JSON.stringify(updated));
   },
   deleteProduct: (id: string) => {
