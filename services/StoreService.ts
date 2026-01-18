@@ -1,6 +1,6 @@
 export interface Variant {
   color: string;
-  sizes: { size: number; stock: number }[];
+  sizes: { size: string | number; stock: number }[];
   images: string[];
 }
 
@@ -12,6 +12,7 @@ export interface Product {
   image: string; 
   images: string[]; 
   category: string;
+  type: 'shoe' | 'tshirt'; // Distinguisher
   description: string;
   variants: Variant[];
   isFeatured?: boolean;
@@ -41,6 +42,7 @@ export interface SiteSettings {
   showAbout: boolean;
   showGallery: boolean;
   showReviews: boolean;
+  showTshirts: boolean;
 }
 
 export interface ShippingInfo {
@@ -65,17 +67,17 @@ export interface Order {
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
-  heroTitle: "WELS FOOTWEAR",
-  heroSubtitle: "Experience the next generation of athletic excellence. Built for the bold.",
+  heroTitle: "WELS ZENITH",
+  heroSubtitle: "Futurist Footwear & Apparel. Engineered for those who move at light speed.",
   heroImage: "https://api.a0.dev/assets/image?text=premium%20futuristic%20sneaker%20floating%20blue%20neon&seed=99",
-  aboutTitle: "OUR MISSION",
-  aboutText: "We blend high-performance engineering with street-ready aesthetics to create footwear that moves at the speed of your life.",
-  aboutImage: "https://api.a0.dev/assets/image?text=aesthetic%20shoe%20manufacturing%20process%20neon&seed=44",
+  aboutTitle: "THE VISION",
+  aboutText: "WELS isn't just a brand; it's a structural evolution of style. We combine aerospace-grade aesthetics with ergonomic perfection.",
+  aboutImage: "https://api.a0.dev/assets/image?text=modern%20streetwear%20lifestyle%20neon&seed=44",
   features: [
-    { icon: 'fa-bolt', title: 'Energy Return', desc: 'Dual-density foam for max bounce.', stat: '98%' },
-    { icon: 'fa-wind', title: 'Breathable', desc: 'Precision engineered mesh tech.', stat: 'MAX' },
-    { icon: 'fa-shield-heart', title: 'Durability', desc: 'Reinforced stress points.', stat: 'SAFE' },
-    { icon: 'fa-microchip', title: 'Smart Fit', desc: 'Adaptive lacing system.', stat: 'LIVE' },
+    { icon: 'fa-bolt', title: 'Power Surge', desc: 'Energy recovery in every step.', stat: '98%' },
+    { icon: 'fa-wind', title: 'Air Flow', desc: 'Precision thermal management.', stat: 'MAX' },
+    { icon: 'fa-shield-heart', title: 'Aegis Core', desc: 'Industrial durability.', stat: 'SAFE' },
+    { icon: 'fa-microchip', title: 'Logic Fit', desc: 'Smart adaptive contours.', stat: 'LIVE' },
   ],
   galleryImages: [],
   productsPerRow: 3,
@@ -83,7 +85,8 @@ const DEFAULT_SETTINGS: SiteSettings = {
   showFeatures: true,
   showAbout: true,
   showGallery: true,
-  showReviews: true
+  showReviews: true,
+  showTshirts: true
 };
 
 export const StoreService = {
@@ -92,6 +95,7 @@ export const StoreService = {
     const prods: Product[] = data ? JSON.parse(data) : [];
     return prods.map(p => ({
       ...p,
+      type: p.type || 'shoe',
       images: p.images || (p.image ? [p.image] : [])
     })).sort((a, b) => (a.orderWeight || 0) - (b.orderWeight || 0));
   },
@@ -122,7 +126,6 @@ export const StoreService = {
     if (!data) return DEFAULT_SETTINGS;
     try {
       const parsed = JSON.parse(data);
-      // Merge with defaults to ensure all required arrays/keys exist
       return { ...DEFAULT_SETTINGS, ...parsed };
     } catch (e) {
       return DEFAULT_SETTINGS;

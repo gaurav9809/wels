@@ -16,6 +16,7 @@ import { Product, StoreService, SiteSettings, ShippingInfo } from './services/St
 
 const App: React.FC = () => {
   const [view, setView] = useState<'home' | 'cart' | 'admin' | 'product'>('home');
+  const [activeType, setActiveType] = useState<'shoe' | 'tshirt' | 'all'>('shoe'); // Default to shoe
   const [user, setUser] = useState<{name: string, email: string, role: string, avatar?: string} | null>(null);
   const [cart, setCart] = useState<{product: Product, qty: number}[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -29,32 +30,27 @@ const App: React.FC = () => {
       setSettings(currentSettings);
       document.documentElement.style.setProperty('--accent', currentSettings.accentColor);
     };
-    
     refreshSettings();
-    
+  }, [view]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('active');
         }
       });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.05 });
 
     const reveals = document.querySelectorAll('.reveal');
     reveals.forEach(el => observer.observe(el));
-
     return () => observer.disconnect();
-  }, [view, filter]);
+  }, [view, filter, settings, activeType]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('wels_user');
     if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
-      } catch (e) {
-        localStorage.removeItem('wels_user');
-      }
+      try { setUser(JSON.parse(savedUser)); } catch (e) { localStorage.removeItem('wels_user'); }
     }
     const savedCart = localStorage.getItem('wels_cart');
     if (savedCart) setCart(JSON.parse(savedCart));
@@ -76,9 +72,7 @@ const App: React.FC = () => {
     setUser(userData);
     localStorage.setItem('wels_user', JSON.stringify(userData));
     setIsAuthOpen(false);
-    if (userData.role === 'admin') {
-      setView('admin');
-    }
+    if (userData.role === 'admin') setView('admin');
   };
 
   const handleLogout = () => {
@@ -89,10 +83,7 @@ const App: React.FC = () => {
   };
 
   const handleCheckout = (shipping: ShippingInfo, paymentMethod: string) => {
-    if (!user) {
-      setIsAuthOpen(true);
-      return;
-    }
+    if (!user) { setIsAuthOpen(true); return; }
     StoreService.createOrder({ 
       userId: user.email, 
       userName: user.name, 
@@ -102,20 +93,25 @@ const App: React.FC = () => {
       total: cart.reduce((a,b) => a + (b.product.price * b.qty), 0) 
     });
     setCart([]);
-    alert(`Order Placed Successfully using ${paymentMethod}! Tracking details sent to ${shipping.phone}`);
+    alert(`Order Finalized! Protocol ${paymentMethod} initiated.`);
     setView('home');
   };
 
-  if (!settings) return null;
-
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen selection:bg-blue-500 selection:text-white">
       <Navbar 
         cartCount={cart.reduce((a, b) => a + b.qty, 0)} 
         onViewChange={(v) => {
           if (v === 'admin' && user?.role !== 'admin') { setIsAuthOpen(true); return; }
           setView(v);
         }} 
+        activeType={activeType}
+        onTypeChange={(type) => {
+          setActiveType(type);
+          setFilter('All');
+          setView('home');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         user={user}
         onLoginClick={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
@@ -126,21 +122,44 @@ const App: React.FC = () => {
           <>
             <Hero 
               settings={settings}
-              onShopNow={() => document.getElementById('products')?.scrollIntoView({behavior: 'smooth'})} 
+              onShopNow={() => document.getElementById('collection-anchor')?.scrollIntoView({behavior: 'smooth'})} 
               onStoryClick={() => document.getElementById('about')?.scrollIntoView({behavior: 'smooth'})}
               isAdmin={user?.role === 'admin'}
               onEditClick={() => setView('admin')}
             />
             {settings.showFeatures && <Features isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
-            <Products 
-              filter={filter} 
-              onFilterChange={setFilter} 
-              onAddToCart={addToCart} 
-              onProductClick={(p) => { setSelectedProduct(p); setView('product'); }}
-              productsPerRow={settings.productsPerRow}
-              isAdmin={user?.role === 'admin'}
-              onEditClick={() => setView('admin')}
-            />
+            
+            <div id="collection-anchor" className="scroll-mt-32">
+              {/* Conditional Rendering based on Navbar Selection */}
+              {(activeType === 'shoe' || activeType === 'all') && (
+                <Products 
+                  type="shoe"
+                  title="SHOES CENTER"
+                  filter={filter} 
+                  onFilterChange={setFilter} 
+                  onAddToCart={addToCart} 
+                  onProductClick={(p) => { setSelectedProduct(p); setView('product'); }}
+                  productsPerRow={settings.productsPerRow}
+                  isAdmin={user?.role === 'admin'}
+                  onEditClick={() => setView('admin')}
+                />
+              )}
+
+              {settings.showTshirts && (activeType === 'tshirt' || activeType === 'all') && (
+                <Products 
+                  type="tshirt"
+                  title="TSHIRT CENTER"
+                  filter={filter} 
+                  onFilterChange={setFilter} 
+                  onAddToCart={addToCart} 
+                  onProductClick={(p) => { setSelectedProduct(p); setView('product'); }}
+                  productsPerRow={settings.productsPerRow}
+                  isAdmin={user?.role === 'admin'}
+                  onEditClick={() => setView('admin')}
+                />
+              )}
+            </div>
+
             {settings.showAbout && <About isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
             {settings.showGallery && <Gallery isAdmin={user?.role === 'admin'} onEditClick={() => setView('admin')} />}
             {settings.showReviews && <Reviews />}

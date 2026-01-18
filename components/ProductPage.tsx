@@ -9,41 +9,40 @@ interface Props {
 
 const ProductPage: React.FC<Props> = ({ product, onAddToCart, onBack }) => {
   const productImages = (product.images && product.images.length > 0) ? product.images : [product.image];
-  const [selectedVariant, setSelectedVariant] = useState<Variant>(product.variants?.[0] || { color: 'Default', images: productImages, sizes: [] });
-  const [selectedSize, setSelectedSize] = useState<number | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | number | null>(null);
   const [activeImg, setActiveImg] = useState(productImages[0]);
 
   useEffect(() => {
-    const variantImages = (selectedVariant.images && selectedVariant.images.length > 0) ? selectedVariant.images : productImages;
-    setActiveImg(variantImages[0]);
+    setActiveImg(productImages[0]);
     setSelectedSize(null);
     window.scrollTo(0, 0);
-  }, [selectedVariant, product]);
+  }, [product]);
 
-  const sizeMatrix = [
-    { uk_india: 6, us: 7, cm: 24.5 }, { uk_india: 7, us: 8, cm: 25.4 }, { uk_india: 8, us: 9, cm: 26.2 },
-    { uk_india: 9, us: 10, cm: 27.1 }, { uk_india: 10, us: 11, cm: 27.9 }, { uk_india: 11, us: 12, cm: 28.8 },
-  ];
+  const shoeSizes = [6, 7, 8, 9, 10, 11];
+  const tshirtSizes = ['S', 'M', 'L', 'XL', 'XXL'];
+  const sizesToDisplay = product.type === 'shoe' ? shoeSizes : tshirtSizes;
 
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
-  const savings = hasDiscount ? product.compareAtPrice! - product.price : 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white mb-12 group transition-all">
-        <i className="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> 
-        <span className="font-bold tracking-widest text-xs uppercase tech-font">Exit_Product_View</span>
+    <div className="max-w-7xl mx-auto px-6 py-12 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+      <button onClick={onBack} className="flex items-center gap-3 text-gray-500 hover:text-blue-500 mb-12 group transition-all tech-font text-[10px] font-black uppercase tracking-widest">
+        <i className="fas fa-arrow-left group-hover:-translate-x-2 transition-transform"></i> Return_to_Archive
       </button>
 
-      <div className="grid lg:grid-cols-2 gap-16 mb-32">
-        <div className="space-y-6">
-          <div className="glass-card rounded-[3rem] p-12 flex items-center justify-center bg-gradient-to-br from-blue-600/10 to-purple-600/10 min-h-[500px] group overflow-hidden relative border-blue-500/20">
-            <div className="absolute top-8 left-8 text-[10px] tech-font text-blue-500 opacity-50 uppercase tracking-[0.5em]">Vision_Scan_V1</div>
-            <img src={activeImg} alt={product.name} className="w-full h-auto object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.5)] transition-all duration-700 transform group-hover:scale-110" />
+      <div className="grid lg:grid-cols-2 gap-20">
+        <div className="space-y-8">
+          <div className="glass-card rounded-[4rem] p-16 flex items-center justify-center bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 min-h-[600px] border-white/5 group relative">
+            <div className="absolute top-10 left-10 text-[9px] tech-font text-blue-500 opacity-40 uppercase tracking-[0.5em]">High_Resolution_Scan</div>
+            <img 
+              src={activeImg} 
+              alt={product.name} 
+              className={`w-full h-auto object-contain transition-all duration-1000 transform group-hover:scale-110 ${product.type === 'shoe' ? 'rotate-[-10deg] drop-shadow-[0_40px_40px_rgba(0,0,0,0.6)]' : 'drop-shadow-2xl'}`} 
+            />
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+          <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
             {productImages.map((img, i) => (
-              <button key={i} onClick={() => setActiveImg(img)} className={`w-24 h-24 rounded-2xl overflow-hidden glass-card flex-shrink-0 border-2 transition-all p-2 bg-white/5 ${activeImg === img ? 'border-blue-500 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+              <button key={i} onClick={() => setActiveImg(img)} className={`w-28 h-28 rounded-[2rem] overflow-hidden glass-card p-4 border-2 transition-all flex-shrink-0 ${activeImg === img ? 'border-blue-500 bg-blue-500/10' : 'border-transparent opacity-40 hover:opacity-100'}`}>
                 <img src={img} className="w-full h-full object-contain" />
               </button>
             ))}
@@ -51,42 +50,42 @@ const ProductPage: React.FC<Props> = ({ product, onAddToCart, onBack }) => {
         </div>
 
         <div className="flex flex-col justify-center">
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4"><span className="text-blue-500 font-black tracking-[0.2em] uppercase text-[10px] bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">{product.category}</span></div>
-            <h1 className="text-5xl md:text-7xl font-black heading-font mt-2 mb-6 tracking-tighter italic uppercase">{product.name}</h1>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-6">
-                <span className="text-5xl font-black gradient-text">₹{product.price}</span>
-                {hasDiscount && (
-                  <span className="text-2xl text-gray-600 font-black line-through decoration-red-600/50 decoration-2">₹{product.compareAtPrice}</span>
-                )}
-              </div>
-              {hasDiscount && (
-                <div className="text-green-500 tech-font text-[10px] font-black uppercase tracking-widest mt-2 animate-pulse">Save ₹{savings} on this unit</div>
-              )}
+          <div className="mb-10">
+            <span className="text-blue-500 font-black tracking-[0.4em] uppercase text-[10px] bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">{product.category} // {product.type}</span>
+            <h1 className="text-6xl md:text-8xl font-black heading-font mt-8 mb-8 tracking-tighter italic uppercase text-white leading-tight">{product.name}</h1>
+            <div className="flex items-center gap-8">
+               <span className="text-6xl font-black gradient-text tracking-tighter italic">₹{product.price}</span>
+               {hasDiscount && <span className="text-3xl text-gray-700 font-black line-through decoration-red-600/40">₹{product.compareAtPrice}</span>}
             </div>
           </div>
 
-          <p className="text-gray-400 text-lg mb-10 leading-relaxed font-light border-l-2 border-blue-600/30 pl-6">{product.description}</p>
+          <p className="text-gray-400 text-xl mb-12 leading-relaxed font-light border-l-4 border-blue-600/30 pl-10 max-w-xl">
+            {product.description || "Synthesizing high-performance engineering with street-level aesthetics. Every fiber is optimized for peak operational capacity."}
+          </p>
 
-          <div className="space-y-10 mb-12">
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest tech-font mb-6">Select_Size (INDIA/UK)</p>
-              <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                {sizeMatrix.map(m => (
-                  <button key={m.uk_india} onClick={() => setSelectedSize(m.uk_india)} className={`h-16 rounded-2xl border-2 flex flex-col items-center justify-center font-black transition-all ${selectedSize === m.uk_india ? 'border-blue-500 bg-blue-500 text-white shadow-xl' : 'border-white/10 bg-white/5 text-gray-400 hover:border-blue-500 hover:text-blue-500'}`}>
-                    <span className="text-sm">{m.uk_india}</span>
-                    <span className="text-[8px] opacity-50 tech-font">UK/IND</span>
-                  </button>
-                ))}
-              </div>
+          <div className="mb-14">
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] mb-8 tech-font italic">Select_Dimensions</p>
+            <div className="flex flex-wrap gap-4">
+               {sizesToDisplay.map(size => (
+                 <button 
+                  key={size} 
+                  onClick={() => setSelectedSize(size)} 
+                  className={`h-16 px-8 rounded-2xl border-2 font-black transition-all tech-font text-xs flex items-center justify-center ${selectedSize === size ? 'border-blue-500 bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)]' : 'border-white/10 bg-white/5 text-gray-500 hover:border-blue-500/50'}`}
+                 >
+                   {size} {product.type === 'shoe' ? 'UK' : ''}
+                 </button>
+               ))}
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <button disabled={!selectedSize} onClick={() => { onAddToCart(product); alert(`Added ${product.name} to cart!`); }} className={`flex-1 py-6 rounded-2xl font-black text-xs tracking-[0.4em] transition-all transform shadow-2xl tech-font ${selectedSize ? 'bg-white text-black hover:bg-blue-600 hover:text-white hover:-translate-y-1' : 'bg-white/5 text-gray-600 cursor-not-allowed'}`}>
-              {selectedSize ? 'INITIALIZE_ORDER' : 'SELECT_DIMENSIONS'}
-            </button>
+          <div className="flex gap-6">
+             <button 
+              disabled={!selectedSize} 
+              onClick={() => { onAddToCart(product); alert(`AUTHORIZED: ${product.name} locked into payload.`); }} 
+              className={`flex-1 py-7 rounded-3xl font-black text-[11px] uppercase tracking-[0.6em] transition-all transform shadow-2xl tech-font ${selectedSize ? 'bg-white text-black hover:bg-blue-600 hover:text-white hover:-translate-y-2' : 'bg-white/5 text-gray-700 cursor-not-allowed border border-white/5'}`}
+             >
+               {selectedSize ? 'Initiate_Purchase_Protocol' : 'Selection_Required'}
+             </button>
           </div>
         </div>
       </div>
